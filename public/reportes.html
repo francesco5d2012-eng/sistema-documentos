@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Valorizaciones y Múltiples Archivos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { background-color: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 10px; }
+    .nav-pills .nav-link { color: #94a3b8; font-weight: 500; border-radius: 8px; padding: 10px 20px; }
+    .nav-pills .nav-link.active { background-color: #2563eb; color: #fff; }
+    .table-dark { --bs-table-bg: #1e293b; --bs-table-striped-bg: #263349; border-color: #334155; }
+    .badge-codigo { background-color: #3b82f6; color: #fff; font-size: 0.85rem; padding: 5px 10px; border-radius: 6px; display: inline-block; }
+    .form-control, .form-select { background-color: #0f172a; border-color: #334155; color: #f8fafc; }
+    .form-control:focus, .form-select:focus { background-color: #0f172a; border-color: #3b82f6; color: #fff; box-shadow: none; }
+    .file-chip { background: #0f172a; border: 1px solid #334155; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 4px; width: 100%; max-width: 220px; }
+    .file-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px; }
+    .col-archivos { width: 18%; vertical-align: top; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-black bg-opacity-50 border-bottom border-secondary py-3 mb-4">
+  <div class="container-fluid px-4">
+    <span class="navbar-brand mb-0 h4 d-flex align-items-center">
+      <i class="bi bi-folder-check text-primary me-2 fs-3"></i>
+      Módulo de Múltiples Archivos y Reportes
+    </span>
+  </div>
+</nav>
+
+<div class="container-fluid px-4 pb-5">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <ul class="nav nav-pills gap-2" role="tablist">
+      <li class="nav-item">
+        <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-reportes">
+          <i class="bi bi-search me-1"></i>1. Consulta, Filtros y Visor / Descarga
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-gestion" id="btn-tab-gestion">
+          <i class="bi bi-cloud-arrow-up me-1"></i>2. Gestión y Carga Masiva
+        </button>
+      </li>
+    </ul>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-info fw-semibold" onclick="descargarReporteExcel()">
+        <i class="bi bi-file-earmark-excel-fill me-1"></i>Reporte
+      </button>
+      <button class="btn btn-success fw-semibold" onclick="abrirModalNuevo()">
+        <i class="bi bi-plus-lg me-1"></i>Nueva Partida / Subir Archivos
+      </button>
+    </div>
+  </div>
+
+  <div class="tab-content">
+    <!-- ==================== PESTAÑA 1: REPORTES Y FILTROS ==================== -->
+    <div class="tab-pane fade show active" id="tab-reportes">
+      <div class="card p-3 mb-4">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-2">
+            <label class="form-label small text-secondary">Año</label>
+            <select id="filtro-anio" class="form-select"><option value="">Todos</option></select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small text-secondary">Proyecto</label>
+            <select id="filtro-proyecto" class="form-select"><option value="">Todos</option></select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small text-secondary">Valorización</label>
+            <select id="filtro-valorizacion" class="form-select"><option value="">Todas</option></select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small text-secondary">Estado</label>
+            <select id="filtro-estado" class="form-select">
+              <option value="">Todos</option>
+              <option value="con_archivo">Con archivos</option>
+              <option value="sin_archivo">Sin archivos</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small text-secondary">Buscar Partida</label>
+            <div class="input-group">
+              <input type="text" id="filtro-partida" class="form-control" placeholder="Código o descripción...">
+              <button class="btn btn-primary" onclick="aplicarFiltros()"><i class="bi bi-funnel"></i></button>
+              <button class="btn btn-outline-secondary" onclick="limpiarFiltros()"><i class="bi bi-arrow-counterclockwise"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-3">
+        <div class="table-responsive">
+          <table class="table table-dark table-striped table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th style="width: 10%;">Valorización</th>
+                <th style="width: 30%;">Código / Partida</th>
+                <th class="col-archivos"><i class="bi bi-file-earmark-pdf text-danger me-1"></i>PDFs</th>
+                <th class="col-archivos"><i class="bi bi-file-earmark-excel text-success me-1"></i>Exceles</th>
+                <th class="col-archivos"><i class="bi bi-images text-info me-1"></i>Fotografías</th>
+                <th class="text-end" style="width: 6%;">ZIP</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-reportes"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== PESTAÑA 2: GESTIÓN CRUD ==================== -->
+    <div class="tab-pane fade" id="tab-gestion">
+      <div class="card p-3">
+        <div class="table-responsive">
+          <table class="table table-dark table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th style="width: 34%;">Código / Partida</th>
+                <th class="col-archivos"><i class="bi bi-file-earmark-pdf text-danger me-1"></i>PDFs</th>
+                <th class="col-archivos"><i class="bi bi-file-earmark-excel text-success me-1"></i>Exceles</th>
+                <th class="col-archivos"><i class="bi bi-images text-info me-1"></i>Fotografías</th>
+                <th class="text-end" style="width: 12%;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-gestion"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== VENTANA FLOTANTE: AGREGAR / EDITAR PARTIDA ==================== -->
+<div class="modal fade" id="modalFormulario" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content bg-dark border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-info" id="titulo-form"><i class="bi bi-plus-circle me-2"></i>Agregar / Editar Partida</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div id="alerta-archivos" class="alert alert-danger d-none py-2 small" role="alert"></div>
+
+        <form id="form-documento">
+          <input type="hidden" id="doc-id">
+          <div class="row g-3 mb-3">
+            <div class="col-md-3">
+              <label class="form-label small text-secondary">Año</label>
+              <input type="number" id="doc-anio" class="form-control" value="2026" required>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label small text-secondary">Valorización</label>
+              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 15" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small text-secondary">Código de Partida</label>
+              <input type="text" id="doc-codigo" class="form-control" placeholder="Ej: 1.1.1" required>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small text-secondary">Proyecto</label>
+            <input type="text" id="doc-proyecto" class="form-control" value="PROYECTO DE AGRICULTURA FAMILIAR EN COMUNIDADES DEL AISD Y AISI 2025 -2026" required>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label small text-secondary">Descripción de la Partida</label>
+            <textarea id="doc-descripcion" class="form-control" rows="2" required></textarea>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <div class="p-3 border border-secondary rounded bg-black bg-opacity-25 h-100">
+                <label class="form-label small text-danger fw-bold"><i class="bi bi-file-earmark-pdf me-1"></i>Subir PDFs (Máx. 10)</label>
+                <input type="file" id="input-pdfs" class="form-control form-control-sm" accept=".pdf" multiple onchange="validarCantidadArchivos(this, 10, 'PDFs')">
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3 border border-secondary rounded bg-black bg-opacity-25 h-100">
+                <label class="form-label small text-success fw-bold"><i class="bi bi-file-earmark-excel me-1"></i>Subir Exceles (Máx. 10)</label>
+                <input type="file" id="input-excels" class="form-control form-control-sm" accept=".xls,.xlsx" multiple onchange="validarCantidadArchivos(this, 10, 'Exceles')">
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3 border border-secondary rounded bg-black bg-opacity-25 h-100">
+                <label class="form-label small text-info fw-bold"><i class="bi bi-images me-1"></i>Subir Fotos (Máx. 100)</label>
+                <input type="file" id="input-imagenes" class="form-control form-control-sm" accept="image/*" multiple onchange="validarCantidadArchivos(this, 100, 'Fotografías')">
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success px-4" id="btn-guardar"><i class="bi bi-save me-1"></i>Guardar Registro</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MODAL VISOR DE DOCUMENTOS ==================== -->
+<div class="modal fade" id="modalVisor" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content bg-dark border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-info" id="visor-titulo">Visor</h5>
+        <a href="#" id="visor-descarga" target="_blank" class="btn btn-sm btn-outline-light ms-auto me-2"><i class="bi bi-download me-1"></i>Descargar</a>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0 text-center bg-black" id="visor-cuerpo" style="min-height: 75vh; display:flex; align-items:center; justify-content:center;"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  let listaGlobal = [];
+  const modalVisor = new bootstrap.Modal(document.getElementById('modalVisor'));
+  const modalFormulario = new bootstrap.Modal(document.getElementById('modalFormulario'));
+
+  async function init() {
+    await cargarDatos();
+    llenarFiltros();
+  }
+
+  async function cargarDatos(params = '') {
+    const res = await fetch('/api/documentos' + params);
+    listaGlobal = await res.json();
+    renderReportes(listaGlobal);
+    renderGestion(listaGlobal);
+  }
+
+  function llenarFiltros() {
+    const anios = [...new Set(listaGlobal.map(d => d.anio))];
+    const proys = [...new Set(listaGlobal.map(d => d.proyecto))];
+    const valos = [...new Set(listaGlobal.map(d => d.valorizacion))];
+
+    document.getElementById('filtro-anio').innerHTML = '<option value="">Todos</option>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
+    document.getElementById('filtro-proyecto').innerHTML = '<option value="">Todos</option>' + proys.map(p => `<option value="${p}">${p}</option>`).join('');
+    document.getElementById('filtro-valorizacion').innerHTML = '<option value="">Todas</option>' + valos.map(v => `<option value="${v}">${v}</option>`).join('');
+  }
+
+  function validarCantidadArchivos(input, max, nombreTipo) {
+    const alerta = document.getElementById('alerta-archivos');
+    if (input.files.length > max) {
+      alerta.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i>Has seleccionado <b>${input.files.length} ${nombreTipo}</b>. El límite máximo permitido es de <b>${max} archivos</b>.`;
+      alerta.classList.remove('d-none');
+      input.value = '';
+    } else {
+      alerta.classList.add('d-none');
+    }
+  }
+
+  function renderPorCategoria(archivos, categoria, puedeBorrar = false) {
+    const filtrados = (archivos || []).filter(f => f.categoria === categoria);
+    if (filtrados.length === 0) return '<span class="text-secondary small">—</span>';
+
+    return filtrados.map(f => {
+      let icon = 'bi-file-earmark';
+      if (categoria === 'pdf') icon = 'bi-file-earmark-pdf text-danger';
+      else if (categoria === 'excel') icon = 'bi-file-earmark-excel text-success';
+      else if (categoria === 'imagen') icon = 'bi-image text-info';
+
+      let botonAccion = '';
+      if (categoria === 'excel') {
+        botonAccion = `<a href="${f.archivo_url}" download class="text-white text-decoration-none" title="Descargar Excel"><i class="bi bi-download"></i></a>`;
+      } else {
+        botonAccion = `<a href="#" onclick='verArchivo(${JSON.stringify(f)})' class="text-white text-decoration-none" title="Visualizar"><i class="bi bi-eye"></i></a>`;
+      }
+
+      let btnEliminar = puedeBorrar 
+        ? `<span class="text-danger ms-1" style="cursor:pointer;" onclick="eliminarArchivo(${f.id})" title="Eliminar archivo"><i class="bi bi-x-circle"></i></span>` 
+        : '';
+
+      return `
+        <div class="file-chip">
+          <div class="d-flex align-items-center gap-1 overflow-hidden">
+            <i class="bi ${icon}"></i>
+            <span class="file-chip-name" title="${f.nombre_original}">${f.nombre_original}</span>
+          </div>
+          <div class="d-flex align-items-center gap-1 flex-shrink-0">
+            ${botonAccion}
+            ${btnEliminar}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderReportes(data) {
+    const tbody = document.getElementById('tabla-reportes');
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-secondary">No hay registros.</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = data.map(d => {
+      const tieneArchivos = d.archivos && d.archivos.length > 0;
+      const btnZip = tieneArchivos
+        ? `<a href="/api/documentos/${d.id}/zip" class="btn btn-sm btn-info text-dark fw-bold" title="Descargar todo en ZIP"><i class="bi bi-file-earmark-zip-fill"></i></a>`
+        : `<button class="btn btn-sm btn-outline-secondary" disabled title="Sin archivos para comprimir"><i class="bi bi-file-earmark-zip"></i></button>`;
+
+      return `
+        <tr>
+          <td><span class="badge bg-secondary">${d.valorizacion}</span></td>
+          <td>
+            <span class="badge-codigo mb-1">${d.partida_codigo}</span>
+            <div class="fw-semibold">${d.partida_descripcion}</div>
+            <small class="text-secondary">${d.proyecto}</small>
+          </td>
+          <td class="col-archivos">${renderPorCategoria(d.archivos, 'pdf', false)}</td>
+          <td class="col-archivos">${renderPorCategoria(d.archivos, 'excel', false)}</td>
+          <td class="col-archivos">${renderPorCategoria(d.archivos, 'imagen', false)}</td>
+          <td class="text-end text-nowrap">${btnZip}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function renderGestion(data) {
+    const tbody = document.getElementById('tabla-gestion');
+    tbody.innerHTML = data.map(d => {
+      const tieneArchivos = d.archivos && d.archivos.length > 0;
+      const btnZip = tieneArchivos
+        ? `<a href="/api/documentos/${d.id}/zip" class="btn btn-sm btn-info text-dark me-1" title="Descargar todos los archivos en ZIP"><i class="bi bi-file-earmark-zip-fill"></i></a>`
+        : `<button class="btn btn-sm btn-outline-secondary me-1" disabled title="Sin archivos adjuntos"><i class="bi bi-file-earmark-zip"></i></button>`;
+
+      return `
+        <tr>
+          <td>
+            <span class="badge-codigo mb-1">${d.partida_codigo}</span>
+            <div class="fw-semibold">${d.partida_descripcion}</div>
+            <small class="text-secondary">${d.valorizacion} (${d.anio})</small>
+          </td>
+          <td class="col-archivos">${renderPorCategoria(d.archivos, 'pdf', true)}</td>
+          <td class="col-archivos">${renderPorCategoria(d.archivos, 'excel', true)}</td>
+          <td class="col-archivos">${renderPorCategoria(d.archivos, 'imagen', true)}</td>
+          <td class="text-end text-nowrap">
+            ${btnZip}
+            <button class="btn btn-sm btn-warning me-1" onclick='editarDoc(${JSON.stringify(d)})' title="Subir archivos / Editar"><i class="bi bi-pencil-square"></i></button>
+            <button class="btn btn-sm btn-danger" onclick="eliminarDoc(${d.id})" title="Eliminar partida"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function verArchivo(f) {
+    document.getElementById('visor-titulo').innerText = f.nombre_original;
+    document.getElementById('visor-descarga').href = f.archivo_url;
+    const cuerpo = document.getElementById('visor-cuerpo');
+    if (f.categoria === 'pdf') {
+      cuerpo.innerHTML = `<iframe src="${f.archivo_url}" width="100%" height="600px" style="border:none;"></iframe>`;
+    } else {
+      cuerpo.innerHTML = `<img src="${f.archivo_url}" class="img-fluid" style="max-height: 75vh; object-fit: contain;">`;
+    }
+    modalVisor.show();
+  }
+
+  function aplicarFiltros() {
+    const q = new URLSearchParams({
+      anio: document.getElementById('filtro-anio').value,
+      proyecto: document.getElementById('filtro-proyecto').value,
+      valorizacion: document.getElementById('filtro-valorizacion').value,
+      estado: document.getElementById('filtro-estado').value,
+      partida: document.getElementById('filtro-partida').value
+    });
+    cargarDatos('?' + q.toString());
+  }
+
+  function limpiarFiltros() {
+    document.getElementById('filtro-anio').value = '';
+    document.getElementById('filtro-proyecto').value = '';
+    document.getElementById('filtro-valorizacion').value = '';
+    document.getElementById('filtro-estado').value = '';
+    document.getElementById('filtro-partida').value = '';
+    cargarDatos();
+  }
+
+  function descargarReporteExcel() {
+    const q = new URLSearchParams({
+      anio: document.getElementById('filtro-anio').value,
+      proyecto: document.getElementById('filtro-proyecto').value,
+      valorizacion: document.getElementById('filtro-valorizacion').value,
+      estado: document.getElementById('filtro-estado').value,
+      partida: document.getElementById('filtro-partida').value
+    });
+    window.location.href = '/api/reporte-excel?' + q.toString();
+  }
+
+  function abrirModalNuevo() {
+    document.getElementById('form-documento').reset();
+    document.getElementById('alerta-archivos').classList.add('d-none');
+    document.getElementById('doc-id').value = '';
+    document.getElementById('titulo-form').innerHTML = '<i class="bi bi-plus-circle me-2"></i>Agregar Nueva Partida';
+    modalFormulario.show();
+  }
+
+  function editarDoc(d) {
+    document.getElementById('form-documento').reset();
+    document.getElementById('alerta-archivos').classList.add('d-none');
+    document.getElementById('titulo-form').innerHTML = `<i class="bi bi-pencil-square me-2"></i>Subir Archivos / Editar Partida ${d.partida_codigo}`;
+    document.getElementById('doc-id').value = d.id;
+    document.getElementById('doc-anio').value = d.anio;
+    document.getElementById('doc-proyecto').value = d.proyecto;
+    document.getElementById('doc-valorizacion').value = d.valorizacion;
+    document.getElementById('doc-codigo').value = d.partida_codigo;
+    document.getElementById('doc-descripcion').value = d.partida_descripcion;
+    modalFormulario.show();
+  }
+
+  document.getElementById('form-documento').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const alerta = document.getElementById('alerta-archivos');
+    alerta.classList.add('d-none');
+
+    const btn = document.getElementById('btn-guardar');
+    btn.disabled = true;
+    btn.innerText = 'Guardando...';
+
+    const id = document.getElementById('doc-id').value;
+    const formData = new FormData();
+    formData.append('anio', document.getElementById('doc-anio').value);
+    formData.append('proyecto', document.getElementById('doc-proyecto').value);
+    formData.append('valorizacion', document.getElementById('doc-valorizacion').value);
+    formData.append('partida_codigo', document.getElementById('doc-codigo').value);
+    formData.append('partida_descripcion', document.getElementById('doc-descripcion').value);
+
+    const pdfs = document.getElementById('input-pdfs').files;
+    const excels = document.getElementById('input-excels').files;
+    const imagenes = document.getElementById('input-imagenes').files;
+
+    for (let file of pdfs) formData.append('pdfs', file);
+    for (let file of excels) formData.append('excels', file);
+    for (let file of imagenes) formData.append('imagenes', file);
+
+    const url = id ? `/api/documentos/${id}` : '/api/documentos';
+    const res = await fetch(url, { method: id ? 'PUT' : 'POST', body: formData });
+    const result = await res.json();
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-save me-1"></i>Guardar Registro';
+
+    if (!res.ok) {
+      alerta.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i>${result.error || 'Error al guardar los archivos.'}`;
+      alerta.classList.remove('d-none');
+      return;
+    }
+
+    modalFormulario.hide();
+    await cargarDatos();
+    llenarFiltros();
+  });
+
+  async function eliminarArchivo(fileId) {
+    if (confirm('¿Deseas eliminar este archivo adjunto?')) {
+      await fetch(`/api/archivos/${fileId}`, { method: 'DELETE' });
+      await cargarDatos();
+    }
+  }
+
+  async function eliminarDoc(id) {
+    if (confirm('¿Eliminar esta partida y todos sus archivos adjuntos?')) {
+      await fetch(`/api/documentos/${id}`, { method: 'DELETE' });
+      await cargarDatos();
+      llenarFiltros();
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
