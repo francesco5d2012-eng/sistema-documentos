@@ -6,28 +6,30 @@ const multer = require('multer');
 const fs = require('fs');
 const archiver = require('archiver');
 const ExcelJS = require('exceljs');
+const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Asegurar que exista la carpeta public/uploads
-const uploadDir = path.join(__dirname, 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configurar almacenamiento con Multer
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname))
+// Configurar cliente de Cloudflare R2 (Compatible con S3)
+const s3Client = new S3Client({
+  region: 'auto',
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+  },
 });
-const upload = multer({ storage });
+const BUCKET_NAME = process.env.R2_BUCKET_NAME;
+
+// Configurar Multer para almacenar temporalmente en memoria (RAM) para enviar a R2
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Conexión a PostgreSQL Neon
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_hQ2pcDf0EnXm@ep-dry-glitter-b4cqe8pc-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require',
+  connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
@@ -52,7 +54,7 @@ const multiUpload = (req, res, next) => {
   });
 };
 
-// Función auxiliar para obtener datos filtrados (usada tanto en la tabla web como en el Excel)
+// Función auxiliar para obtener datos filtrados
 async function obtenerPartidasFiltradas(filtros) {
   const { anio, proyecto, valorizacion, partida, estado } = filtros;
   let query = 'SELECT * FROM documentos_reporte WHERE 1=1';
@@ -85,7 +87,7 @@ async function obtenerPartidasFiltradas(filtros) {
   return partidas;
 }
 
-// 1. Obtener todas las partidas con sus archivos
+// 1. Obtener todas las partidas
 app.get('/api/documentos', async (req, res) => {
   try {
     const finalResult = await obtenerPartidasFiltradas(req.query);
@@ -93,7 +95,7 @@ app.get('/api/documentos', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 2. Generar Reporte Excel con 2 Hojas (Detalle y Resumen) según filtros
+// 2. Generar Reporte Excel
 app.get('/api/reporte-excel', async (req, res) => {
   try {
     const partidas = await obtenerPartidasFiltradas(req.query);
@@ -101,9 +103,7 @@ app.get('/api/reporte-excel', async (req, res) => {
     workbook.creator = 'Sistema de Gestión Documental';
     workbook.created = new Date();
 
-    // ==================== HOJA 1: DETALLE DE PARTIDAS ====================
     const wsDetalle = workbook.addWorksheet('1. Detalle de Partidas');
-
     wsDetalle.mergeCells('A1:J1');
     const titleCell = wsDetalle.getCell('A1');
     titleCell.value = 'REPORTE DETALLADO DE SUSTENTOS Y ARCHIVOS POR PARTIDA';
@@ -122,10 +122,7 @@ app.get('/api/reporte-excel', async (req, res) => {
       cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
       cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-      cell.border = {
-        top: { style: 'thin' }, left: { style: 'thin' },
-        bottom: { style: 'thin' }, right: { style: 'thin' }
-      };
+      cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
     });
 
     let totalConArchivos = 0;
@@ -147,12 +144,7 @@ app.get('/api/reporte-excel', async (req, res) => {
       if (tieneArchivos) totalConArchivos++; else totalSinArchivos++;
 
       const row = wsDetalle.addRow([
-        index + 1,
-        p.anio,
-        p.proyecto,
-        p.valorizacion,
-        p.partida_codigo,
-        p.partida_descripcion,
+        index + 1, p.anio, p.proyecto, p.valorizacion, p.partida_codigo, p.partida_descripcion,
         tieneArchivos ? 'COMPLETO / CON ARCHIVOS' : 'PENDIENTE',
         pdfs.length > 0 ? pdfs.join('\n') : 'Sin archivos',
         excels.length > 0 ? excels.join('\n') : 'Sin archivos',
@@ -183,9 +175,7 @@ app.get('/api/reporte-excel', async (req, res) => {
       { width: 42 }, { width: 22 }, { width: 32 }, { width: 32 }, { width: 32 }
     ];
 
-    // ==================== HOJA 2: RESUMEN EJECUTIVO ====================
     const wsResumen = workbook.addWorksheet('2. Resumen');
-
     wsResumen.mergeCells('A1:C1');
     const resTitle = wsResumen.getCell('A1');
     resTitle.value = 'RESUMEN EJECUTIVO DE DOCUMENTACIÓN';
@@ -204,7 +194,6 @@ app.get('/api/reporte-excel', async (req, res) => {
         c.alignment = { vertical: 'middle', horizontal: 'center' };
         c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
       });
-
       filas.forEach(f => {
         const r = wsResumen.addRow(f);
         r.eachCell((c, colIdx) => {
@@ -236,7 +225,6 @@ app.get('/api/reporte-excel', async (req, res) => {
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename="Reporte_Valorizaciones_Partidas.xlsx"');
-
     await workbook.xlsx.write(res);
     res.end();
   } catch (err) {
@@ -244,73 +232,33 @@ app.get('/api/reporte-excel', async (req, res) => {
   }
 });
 
-// 3. Descargar ZIP seguro usando archivo temporal y res.download
-app.get('/api/documentos/:id/zip', async (req, res) => {
+// Función interna para subir a Cloudflare R2
+async function subirAR2(file) {
+  const fileKey = `uploads/${Date.now()}-${Math.round(Math.random() * 1E9)}-${file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_')}`;
+  await s3Client.send(new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: fileKey,
+    Body: file.buffer,
+    ContentType: file.mimetype,
+  }));
+  return `${process.env.R2_PUBLIC_URL}/${fileKey}`;
+}
+
+// Función interna para borrar de Cloudflare R2
+async function borrarDeR2(fileUrl) {
   try {
-    const { id } = req.params;
-    const docRes = await pool.query('SELECT * FROM documentos_reporte WHERE id = $1', [id]);
-    if (docRes.rows.length === 0) return res.status(404).send('Registro no encontrado');
-
-    const doc = docRes.rows[0];
-    const filesRes = await pool.query('SELECT * FROM documento_archivos WHERE documento_id = $1', [id]);
-    const archivos = filesRes.rows;
-
-    if (archivos.length === 0) {
-      return res.status(400).send('No hay archivos adjuntos en esta partida.');
-    }
-
-    const baseLimpia = `${doc.partida_codigo} ${doc.partida_descripcion}`
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[<>:"/\\|?*]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .substring(0, 80);
-
-    const tempZipPath = path.join(uploadDir, `temp_${id}_${Date.now()}.zip`);
-    const output = fs.createWriteStream(tempZipPath);
-    const archive = archiver('zip', { zlib: { level: 9 } });
-
-    output.on('close', () => {
-      res.download(tempZipPath, `${baseLimpia}.zip`, () => {
-        if (fs.existsSync(tempZipPath)) fs.unlinkSync(tempZipPath);
-      });
-    });
-
-    archive.on('error', (err) => {
-      if (fs.existsSync(tempZipPath)) fs.unlinkSync(tempZipPath);
-      if (!res.headersSent) res.status(500).send('Error al generar ZIP: ' + err.message);
-    });
-
-    archive.pipe(output);
-
-    let agregados = 0;
-    for (let f of archivos) {
-      const filePath = path.join(__dirname, 'public', f.archivo_url);
-      if (fs.existsSync(filePath)) {
-        let subcarpeta = `${baseLimpia}_Otros`;
-        if (f.categoria === 'pdf') subcarpeta = `${baseLimpia}_PDFs`;
-        else if (f.categoria === 'excel') subcarpeta = `${baseLimpia}_Excels`;
-        else if (f.categoria === 'imagen') subcarpeta = `${baseLimpia}_Fotos`;
-
-        const nombreSeguro = path.basename(f.nombre_original).replace(/[<>:"/\\|?*]/g, '_');
-        archive.file(filePath, { name: `${subcarpeta}/${nombreSeguro}` });
-        agregados++;
-      }
-    }
-
-    if (agregados === 0) {
-      archive.abort();
-      if (fs.existsSync(tempZipPath)) fs.unlinkSync(tempZipPath);
-      return res.status(404).send('Los archivos físicos no se encontraron en el servidor.');
-    }
-
-    await archive.finalize();
+    const urlParts = fileUrl.split('/');
+    const fileKey = `uploads/${urlParts[urlParts.length - 1]}`;
+    await s3Client.send(new DeleteObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: fileKey,
+    }));
   } catch (err) {
-    if (!res.headersSent) res.status(500).send('Error interno: ' + err.message);
+    console.error('Error al borrar de R2:', err);
   }
-});
+}
 
-// 4. Crear partida y subir archivos
+// 3. Crear partida y subir archivos a R2
 app.post('/api/documentos', multiUpload, async (req, res) => {
   const { anio, proyecto, valorizacion, partida_codigo, partida_descripcion } = req.body;
   try {
@@ -324,10 +272,11 @@ app.post('/api/documentos', multiUpload, async (req, res) => {
     const procesarArchivos = async (files, categoria) => {
       if (!files) return;
       for (let f of files) {
+        const fileUrl = await subirAR2(f);
         await pool.query(
           `INSERT INTO documento_archivos (documento_id, categoria, nombre_original, archivo_url, tipo_mimetype, tamanio_kb) 
            VALUES ($1, $2, $3, $4, $5, $6)`,
-          [documento_id, categoria, f.originalname, `uploads/${f.filename}`, f.mimetype, Math.round(f.size / 1024)]
+          [documento_id, categoria, f.originalname, fileUrl, f.mimetype, Math.round(f.size / 1024)]
         );
       }
     };
@@ -342,7 +291,7 @@ app.post('/api/documentos', multiUpload, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 5. Actualizar partida o agregar más archivos
+// 4. Actualizar partida y adjuntar más archivos a R2
 app.put('/api/documentos/:id', multiUpload, async (req, res) => {
   const { id } = req.params;
   const { anio, proyecto, valorizacion, partida_codigo, partida_descripcion } = req.body;
@@ -370,10 +319,11 @@ app.put('/api/documentos/:id', multiUpload, async (req, res) => {
     const procesarArchivos = async (files, categoria) => {
       if (!files) return;
       for (let f of files) {
+        const fileUrl = await subirAR2(f);
         await pool.query(
           `INSERT INTO documento_archivos (documento_id, categoria, nombre_original, archivo_url, tipo_mimetype, tamanio_kb) 
            VALUES ($1, $2, $3, $4, $5, $6)`,
-          [id, categoria, f.originalname, `uploads/${f.filename}`, f.mimetype, Math.round(f.size / 1024)]
+          [id, categoria, f.originalname, fileUrl, f.mimetype, Math.round(f.size / 1024)]
         );
       }
     };
@@ -388,26 +338,24 @@ app.put('/api/documentos/:id', multiUpload, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 6. Eliminar un archivo individual
+// 5. Eliminar un archivo individual (de BD y de R2)
 app.delete('/api/archivos/:id', async (req, res) => {
   try {
     const fileRes = await pool.query('SELECT archivo_url FROM documento_archivos WHERE id = $1', [req.params.id]);
     if (fileRes.rows.length > 0) {
-      const filePath = path.join(__dirname, 'public', fileRes.rows[0].archivo_url);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      await borrarDeR2(fileRes.rows[0].archivo_url);
       await pool.query('DELETE FROM documento_archivos WHERE id = $1', [req.params.id]);
     }
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 7. Eliminar partida completa y sus archivos
+// 6. Eliminar partida completa (y sus archivos de R2)
 app.delete('/api/documentos/:id', async (req, res) => {
   try {
     const filesRes = await pool.query('SELECT archivo_url FROM documento_archivos WHERE documento_id = $1', [req.params.id]);
     for (let f of filesRes.rows) {
-      const filePath = path.join(__dirname, 'public', f.archivo_url);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      await borrarDeR2(f.archivo_url);
     }
     await pool.query('DELETE FROM documentos_reporte WHERE id = $1', [req.params.id]);
     res.json({ success: true });

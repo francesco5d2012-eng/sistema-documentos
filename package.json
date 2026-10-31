@@ -6,6 +6,7 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1161.0",
     "archiver": "^5.3.2",
     "cors": "^2.8.5",
     "exceljs": "^4.4.0",
