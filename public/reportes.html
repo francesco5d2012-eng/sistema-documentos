@@ -18,6 +18,12 @@
     .file-chip { background: #0f172a; border: 1px solid #334155; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 4px; width: 100%; max-width: 220px; }
     .file-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px; }
     .col-archivos { width: 18%; vertical-align: top; }
+    
+    /* Estilos específicos para la Pestaña 3 */
+    .table-ceproder th { background-color: #2563eb !important; color: white; position: sticky; top: 0; z-index: 2; white-space: nowrap; }
+    .table-container { max-height: 500px; overflow: auto; background: #1e293b; border-radius: 8px; }
+    .bg-purple { background-color: #6f42c1 !important; color: white !important; }
+    .dropdown-menu-dark { max-height: 300px; overflow-y: auto; min-width: 300px; }
   </style>
 </head>
 <body>
@@ -36,12 +42,17 @@
     <ul class="nav nav-pills gap-2" role="tablist">
       <li class="nav-item">
         <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-reportes">
-          <i class="bi bi-search me-1"></i>1. Consulta, Filtros y Visor / Descarga
+          <i class="bi bi-search me-1"></i>1. Consulta, Filtros y Visor
         </button>
       </li>
       <li class="nav-item">
         <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-gestion" id="btn-tab-gestion">
           <i class="bi bi-cloud-arrow-up me-1"></i>2. Gestión y Carga Masiva
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-panel-ceproder" id="btn-tab-ceproder" onclick="cargarDatosCeproder()">
+          <i class="bi bi-bar-chart-line me-1"></i>3. Panel de Control - Reportes CEPRODER
         </button>
       </li>
     </ul>
@@ -130,6 +141,144 @@
         </div>
       </div>
     </div>
+
+    <!-- ==================== PESTAÑA 3: PANEL DE CONTROL CEPRODER ==================== -->
+    <div class="tab-pane fade" id="tab-panel-ceproder">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold text-light m-0">Panel de Control - Reportes CEPRODER (2026)</h4>
+      </div>
+      
+      <!-- Filtros Pestaña 3 -->
+      <div class="card p-3 mb-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-2">
+            <label class="form-label small fw-bold">Proyecto</label>
+            <select id="proyectoFiltro" class="form-select form-select-sm" onchange="actualizarPartidas()">
+              <option value="">Todos</option>
+              <option value="AGRICULTURA FAMILIAR">AGRICULTURA FAMILIAR</option>
+              <option value="AGRICULTURA FAMILIAR PROGRESO COYLLURQUI">AGRICULTURA FAMILIAR PROGRESO COYLLURQUI</option>
+              <option value="CADENA PRODUCTIVA">CADENA PRODUCTIVA</option>
+              <option value="DESARROLLO AGROPECUARIO HUANCUIRE">DESARROLLO AGROPECUARIO HUANCUIRE</option>
+              <option value="FORESTACION">FORESTACION</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-bold">Fecha Inicio</label>
+            <input type="date" id="fInicio" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-bold">Fecha Fin</label>
+            <input type="date" id="fFin" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-1">
+            <label class="form-label small fw-bold">Valorización</label>
+            <select id="valFiltro" class="form-select form-select-sm">
+              <option value="">Todos</option><option value="1">01</option><option value="2">02</option><option value="3">03</option><option value="4">04</option><option value="5">05</option><option value="6">06</option>
+            </select>
+          </div>
+          <div class="col-md-1">
+            <label class="form-label small fw-bold">Adenda</label>
+            <select id="adendaFiltro" class="form-select form-select-sm">
+              <option value="">Todos</option><option value="1">01</option><option value="2">02</option><option value="3">03</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-bold">Cód. Partida (Múltiple)</label>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-light w-100 dropdown-toggle text-start" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="btnPartidas">
+                Seleccionar...
+              </button>
+              <ul class="dropdown-menu dropdown-menu-dark p-2" id="listaPartidas" style="width: 300px;"></ul>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-bold">Comunidad</label>
+            <select id="comunidadFiltro" class="form-select form-select-sm">
+              <option value="">Todas</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="row g-2 align-items-end mt-2">
+          <div class="col-md-1">
+            <label class="form-label small fw-bold">Género</label>
+            <select id="generoFiltro" class="form-select form-select-sm">
+              <option value="">Todos</option><option value="M">M</option><option value="F">F</option>
+            </select>
+          </div>
+          <div class="col-md-1">
+            <label class="form-label small fw-bold">Edad</label>
+            <input type="number" id="edadFiltro" class="form-control form-control-sm" min="0">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-bold">DNI</label>
+            <input type="text" id="dniFiltro" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-bold">Nombres y Apellidos</label>
+            <input type="text" id="nombresFiltro" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-3">
+            <button class="btn btn-primary btn-sm w-100 fw-bold" onclick="buscarDatosCeproder()">
+              <i class="bi bi-search me-1"></i>FILTRAR DATOS
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla Resumen -->
+      <div class="card p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="fw-bold text-primary m-0">Resumen de Beneficiarios por Comunidad</h5>
+          <button class="btn btn-outline-success btn-sm fw-bold" onclick="exportarResumenExcel()">EXPORTAR RESUMEN</button>
+        </div>
+        <div class="table-container" style="max-height: 250px;">
+          <table id="tablaResumenComunidades" class="table table-dark table-striped table-sm text-center mb-0">
+            <thead>
+              <tr>
+                <th style="width: 50px;">N°</th>
+                <th class="text-start">Comunidad</th>
+                <th style="width: 200px;">Cantidad de Beneficiarios</th>
+              </tr>
+            </thead>
+            <tbody id="tablaResumen">
+              <tr><td colspan="3" class="text-muted p-3">Esperando filtros...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tabla Principal -->
+      <div class="card p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="fw-bold text-primary m-0">Registros Según filtros realizados</h5>
+          <button class="btn btn-outline-success btn-sm fw-bold" onclick="exportarRegistrosExcel()">EXPORTAR REGISTROS</button>
+        </div>
+        <div class="table-container">
+          <table id="tablaCeproder" class="table table-dark table-striped table-hover table-sm text-center mb-0">
+            <thead>
+              <tr>
+                <th>N°</th><th>NOMBRES Y APELLIDOS</th><th>DNI</th><th>EDAD</th><th>GÉNERO</th>
+                <th>COMUNIDAD</th><th>SECTOR</th><th>CARGO</th><th>MATERIAL</th><th>CANTIDAD</th>
+                <th>CULTIVO/CRIANZA/FORRAJE</th><th>ESPECIALISTA</th><th>FECHA</th><th>ACTIVIDAD / DESCRIPCION</th>
+                <th>HECT.</th><th>OVINO ADULTO</th><th>OVINO BORREGO</th><th>OVINO CORDERO</th>
+                <th>VACUNO ADULTO</th><th>VACUNO BAQUILLA</th><th>VACUNO BECERRO</th><th>CAMELIDO ADULTO</th><th>CAMELIDO BAQUILLA</th><th>CAMELIDO BECERRO</th><th>PROYECTO</th><th>ADENDA</th>
+                <th class="bg-purple">VALORIZACION</th><th class="bg-purple">COD. DE PARTIDA</th>
+                <th class="bg-primary text-white">DOCUMENTO ADJUNTO</th>
+                <th>DEPARTAMENTO</th><th>PROVINCIA</th><th>DISTRITO</th>
+              </tr>
+            </thead>
+            <tbody id="tablaResultados">
+              <tr><td colspan="32" class="text-muted p-4">Haz clic en "Filtrar Datos" para mostrar los registros.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="text-end mt-2">
+          <span id="contadorCeproder" class="badge bg-success" style="font-size: 14px;">Total registros: 0</span>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -218,20 +367,41 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+  // ==================== VARIABLES GLOBALES ====================
   let listaGlobal = [];
+  let datosCeproderGlobal = [];
   const modalVisor = new bootstrap.Modal(document.getElementById('modalVisor'));
   const modalFormulario = new bootstrap.Modal(document.getElementById('modalFormulario'));
 
+  const comunidadesCeproder = [
+    "ANTUYO", "ALLAHUA", "ANDRES AVELINO CÁCERES", "CONGOTA - ARCOSPAMPA", "AYAHUILLCA", 
+    "CARMEN ALTO", "CCARAMPA", "CCAHUAPIRHUA", "CCASA", "CHICÑAHUI", "CHILA", "CHOAQUERE", 
+    "CHOCCOYO", "CHOQUECCA ANTIO", "CHUICUNI", "CHUMILLE", "CUCHUHUACHO", "ESCORNO", 
+    "HUANACOPAMPA", "HUANCUIRE", "TAMBOBAMBA-HUANCUIRE", "LLAULLIYOC", "MANUEL SEOANE CORRALES", 
+    "MINASCUCHO", "MIRAFLORES", "ÑAHUINLLA", "PALCCA", "PATABAMBA", "PATAHUASI", "PATARCANCHA", 
+    "PATARIO", "PATRON SANTIAGO", "PISACCASA, YURICANCHA, HUARUMA", "PITIC", "PROGRESO", 
+    "PUMAMARCA", "QUIHUINCHA", "QUEHUIRA", "QQUELLO", "QUEULLABAMBA", "QUEUÑA", 
+    "RECORD CCONCCACCA", "SACSAHUILLCA", "SAN MIGUEL", "SORCCO", "TAMBULLA"
+  ];
+
+  // ==================== INICIALIZACIÓN ====================
   async function init() {
     await cargarDatos();
     llenarFiltros();
+    llenarComunidadesCeproder();
+    actualizarPartidas();
   }
 
   async function cargarDatos(params = '') {
-    const res = await fetch('/api/documentos' + params);
-    listaGlobal = await res.json();
-    renderReportes(listaGlobal);
-    renderGestion(listaGlobal);
+    try {
+      const res = await fetch('/api/documentos' + params);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      listaGlobal = await res.json();
+      renderReportes(listaGlobal);
+      renderGestion(listaGlobal);
+    } catch (err) {
+      console.error('Error cargando documentos:', err);
+    }
   }
 
   function llenarFiltros() {
@@ -244,6 +414,14 @@
     document.getElementById('filtro-valorizacion').innerHTML = '<option value="">Todas</option>' + valos.map(v => `<option value="${v}">${v}</option>`).join('');
   }
 
+  function llenarComunidadesCeproder() {
+    const select = document.getElementById('comunidadFiltro');
+    comunidadesCeproder.forEach(c => {
+      select.innerHTML += `<option value="${c}">${c}</option>`;
+    });
+  }
+
+  // ==================== LÓGICA PESTAÑA 1 Y 2 ====================
   function validarCantidadArchivos(input, max, nombreTipo) {
     const alerta = document.getElementById('alerta-archivos');
     if (input.files.length > max) {
@@ -469,6 +647,206 @@
       await cargarDatos();
       llenarFiltros();
     }
+  }
+
+  // ==================== LÓGICA PESTAÑA 3 (CEPRODER) ====================
+  const dependenciasPartidas = {
+    "AGRICULTURA FAMILIAR": [
+      {v: "1.1.1", t: "1.1.1 Presentacion de Eca y prueba de caja inicial"},
+      {v: "1.1.2", t: "1.1.2 Capacitacion ECAS en practicas Agronomicas"},
+      {v: "1.2.1", t: "1.2.1 Implementacion con maquina agricola"}
+    ],
+    "CADENA PRODUCTIVA": [
+      {v: "1.1.1", t: "1.1.1 Capacitación ECAS en buenas prácticas"},
+      {v: "2.3.1", t: "2.3.1 Capacitacion ECA en reproduccion animal"}
+    ]
+  };
+
+  function actualizarPartidas() {
+    const proyecto = document.getElementById('proyectoFiltro').value;
+    const contenedor = document.getElementById('listaPartidas');
+    const btn = document.getElementById('btnPartidas');
+    
+    contenedor.innerHTML = `
+      <li class="mb-2 border-bottom border-secondary pb-1">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="selectAllPartidas" onchange="toggleAll(this)">
+          <label class="form-check-label fw-bold text-primary small" for="selectAllPartidas">MARCAR TODOS</label>
+        </div>
+      </li>
+    `;
+    btn.innerText = "Seleccionar...";
+    
+    if (proyecto && dependenciasPartidas[proyecto]) {
+      dependenciasPartidas[proyecto].forEach(p => {
+        contenedor.innerHTML += `
+          <li>
+            <div class="form-check">
+              <input class="form-check-input check-partida" type="checkbox" value="${p.v}" onchange="actualizarEtiqueta()">
+              <label class="form-check-label small text-light">${p.t}</label>
+            </div>
+          </li>`;
+      });
+    } else {
+      contenedor.innerHTML += `<li class="text-muted small p-2">Seleccione un proyecto primero</li>`;
+    }
+  }
+
+  function actualizarEtiqueta() {
+    let seleccionadas = document.querySelectorAll('.check-partida:checked');
+    document.getElementById('btnPartidas').innerText = seleccionadas.length > 0 
+      ? seleccionadas.length + " seleccionadas" 
+      : "Seleccionar...";
+  }
+
+  function toggleAll(source) {
+    const checkboxes = document.querySelectorAll('#listaPartidas input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+      if(checkbox.id !== 'selectAllPartidas') checkbox.checked = source.checked;
+    });
+    actualizarEtiqueta();
+  }
+
+  async function cargarDatosCeproder() {
+    if (datosCeproderGlobal.length === 0) {
+      buscarDatosCeproder();
+    }
+  }
+
+  async function buscarDatosCeproder() {
+    let partidasSeleccionadas = [];
+    document.querySelectorAll('.check-partida:checked').forEach(cb => {
+      partidasSeleccionadas.push(cb.value);
+    });
+
+    const params = new URLSearchParams({
+      proyecto: document.getElementById('proyectoFiltro').value,
+      fInicio: document.getElementById('fInicio').value,
+      fFin: document.getElementById('fFin').value,
+      valorizacion: document.getElementById('valFiltro').value,
+      adenda: document.getElementById('adendaFiltro').value,
+      partidas: partidasSeleccionadas.join(','),
+      comunidad: document.getElementById('comunidadFiltro').value,
+      genero: document.getElementById('generoFiltro').value,
+      edad: document.getElementById('edadFiltro').value,
+      dni: document.getElementById('dniFiltro').value,
+      nombres: document.getElementById('nombresFiltro').value
+    });
+
+    try {
+      document.getElementById('tablaResultados').innerHTML = '<tr><td colspan="32" class="text-center p-4"><div class="spinner-border text-primary" role="status"></div> Cargando datos...</td></tr>';
+      
+      const res = await fetch('/api/ceproder?' + params.toString());
+      
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Error HTTP ${res.status} (${res.statusText})`);
+      }
+
+      const data = await res.json();
+      if (!Array.isArray(data)) {
+        throw new Error("El servidor no devolvió una lista válida.");
+      }
+
+      datosCeproderGlobal = data;
+      renderTablaCeproder(datosCeproderGlobal);
+      renderResumenComunidad(datosCeproderGlobal);
+      document.getElementById('contadorCeproder').innerText = "Total registros: " + datosCeproderGlobal.length;
+
+    } catch (error) {
+      console.error("Error al buscar datos:", error);
+      document.getElementById('tablaResultados').innerHTML = `<tr><td colspan="32" class="text-danger fw-bold p-4">Error al consultar BD: ${error.message}</td></tr>`;
+    }
+  }
+
+  function renderTablaCeproder(data) {
+    const tbody = document.getElementById('tablaResultados');
+    if (data.length === 0) {
+      tbody.innerHTML = "<tr><td colspan='32' class='text-muted p-4'>No se encontraron registros con esos filtros.</td></tr>";
+      return;
+    }
+
+    let html = "";
+    data.forEach(r => {
+      let btnVer = r.documento_adjunto 
+        ? `<a href="${r.documento_adjunto}" target="_blank" class="btn btn-info btn-sm fw-bold text-white">VER</a>` 
+        : `<button class="btn btn-secondary btn-sm fw-bold" disabled>VER</button>`;
+
+      html += `<tr>
+        <td>${r.nro_registro || ''}</td><td>${r.nombres_apellidos || ''}</td><td>${r.dni || ''}</td>
+        <td>${r.edad || ''}</td><td>${r.genero || ''}</td><td>${r.comunidad || ''}</td>
+        <td>${r.sector || ''}</td><td>${r.cargo || ''}</td><td>${r.material || ''}</td>
+        <td>${r.cantidad || ''}</td><td>${r.cultivo || ''}</td><td>${r.especialista || ''}</td>
+        <td>${r.fecha ? new Date(r.fecha).toLocaleDateString('es-ES', {timeZone: 'UTC'}) : ''}</td>
+        <td>${r.actividad || ''}</td><td>${r.hect || ''}</td>
+        <td>${r.ovino_adulto || ''}</td><td>${r.ovino_borrego || ''}</td><td>${r.ovino_cordero || ''}</td>
+        <td>${r.vacuno_adulto || ''}</td><td>${r.vacuno_baquilla || ''}</td><td>${r.vacuno_becerro || ''}</td>
+        <td>${r.camelido_adulto || ''}</td><td>${r.camelido_baquilla || ''}</td><td>${r.camelido_cria || ''}</td>
+        <td>${r.proyecto || ''}</td><td>${r.adenda || ''}</td>
+        <td class="bg-purple">${r.valorizacion || ''}</td><td class="bg-purple">${r.cod_partida || ''}</td>
+        <td class="bg-primary text-white">${btnVer}</td>
+        <td>${r.departamento || ''}</td><td>${r.provincia || ''}</td><td>${r.distrito || ''}</td>
+      </tr>`;
+    });
+    tbody.innerHTML = html;
+  }
+
+  function renderResumenComunidad(data) {
+    const tbody = document.getElementById('tablaResumen');
+    let htmlResumen = "";
+    
+    comunidadesCeproder.forEach((com, index) => {
+      let cantidad = data.filter(r => {
+        if (!r.comunidad) return false;
+        return r.comunidad.toString().trim().toUpperCase() === com.toString().trim().toUpperCase();
+      }).length;
+
+      if (cantidad > 0) {
+        htmlResumen += `<tr><td>${index + 1}</td><td class="text-start">${com}</td><td class="fw-bold fs-6">${cantidad}</td></tr>`;
+      }
+    });
+
+    if (htmlResumen === "") {
+      htmlResumen = "<tr><td colspan='3' class='text-muted'>No hay registros para resumir.</td></tr>";
+    }
+    tbody.innerHTML = htmlResumen;
+  }
+
+  // ==================== FUNCIONES DE EXPORTACIÓN A EXCEL ====================
+  function exportarTablaAExcel(tableId, nombreArchivo) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    const cloneTable = table.cloneNode(true);
+    const buttons = cloneTable.querySelectorAll('button, a.btn');
+    buttons.forEach(btn => btn.remove());
+
+    let html = cloneTable.outerHTML;
+    let meta = '<meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">';
+    let estilo = '<style>th { background-color: #2563eb; color: white; } td, th { border: 1px solid #ccc; padding: 5px; }</style>';
+    
+    let blob = new Blob([meta + estilo + html], { type: "application/vnd.ms-excel" });
+    let url = URL.createObjectURL(blob);
+    let link = document.createElement("a");
+    let fechaHoy = new Date().toISOString().slice(0,10);
+    
+    link.href = url;
+    link.download = `${nombreArchivo}_${fechaHoy}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function exportarResumenExcel() {
+    exportarTablaAExcel('tablaResumenComunidades', 'Resumen_Beneficiarios_Comunidad');
+  }
+
+  function exportarRegistrosExcel() {
+    if (datosCeproderGlobal.length === 0) {
+      alert("No hay registros cargados para exportar.");
+      return;
+    }
+    exportarTablaAExcel('tablaCeproder', 'Reporte_Registros_CEPRODER');
   }
 
   init();

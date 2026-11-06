@@ -1,12 +1,12 @@
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
-const fs = require('fs');
 const archiver = require('archiver');
 const ExcelJS = require('exceljs');
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 
 const app = express();
 app.use(cors());
@@ -18,20 +18,35 @@ const s3Client = new S3Client({
   region: 'auto',
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
   credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
   },
 });
 const BUCKET_NAME = process.env.R2_BUCKET_NAME;
+const R2_PUBLIC_URL = (process.env.R2_PUBLIC_URL || '').replace(/\/$/, '');
 
-// Configurar Multer para almacenar temporalmente en memoria (RAM) para enviar a R2
+// Configurar Multer en memoria (RAM)
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Conexión a PostgreSQL Neon
+// Conexión a PostgreSQL Neon (con respaldo directo integrado y sin channel_binding)
+const RAW_DB_URL = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_hQ2pcDf0EnXm@ep-dry-glitter-b4cqe8pc-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require';
+const CLEAN_DB_URL = RAW_DB_URL.replace('&channel_binding=require', '');
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: CLEAN_DB_URL,
   ssl: { rejectUnauthorized: false }
 });
+
+// Verificar conexión y tablas al iniciar
+async function initDB() {
+  try {
+    const res = await pool.query('SELECT NOW()');
+    console.log('✅ Conectado a PostgreSQL (Neon) correctamente:', res.rows[0].now);
+  } catch (err) {
+    console.error('❌ Error al conectar a la BD:', err.message);
+  }
+}
+initDB();
 
 // Configuración de límites: 10 PDFs, 10 Exceles y 100 Fotografías
 const multiUpload = (req, res, next) => {
@@ -54,19 +69,37 @@ const multiUpload = (req, res, next) => {
   });
 };
 
-// Función auxiliar para obtener datos filtrados
+// Función auxiliar para subir archivo a Cloudflare R2
+async function subirArchivoAR2(file, carpeta, documentoId) {
+  const nombreLimpio = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const r2Key = `${carpeta}/${documentoId}_${Date.now()}_${nombreLimpio}`;
+
+  await s3Client.send(new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: r2Key,
+    Body: file.buffer,
+    ContentType: file.mimetype
+  }));
+
+  const archivoUrl = R2_PUBLIC_URL ? `${R2_PUBLIC_URL}/${r2Key}` : `/api/r2-file?key=${encodeURIComponent(r2Key)}`;
+  return { r2Key, archivoUrl };
+}
+
+// ==================== FUNCIONES AUXILIARES ====================
+
+// 1. Obtener partidas filtradas (Pestaña 1 y 2)
 async function obtenerPartidasFiltradas(filtros) {
   const { anio, proyecto, valorizacion, partida, estado } = filtros;
   let query = 'SELECT * FROM documentos_reporte WHERE 1=1';
   let params = [];
   let idx = 1;
 
-  if (anio) { query += ` AND anio = $${idx++}`; params.push(anio); }
-  if (proyecto) { query += ` AND proyecto = $${idx++}`; params.push(proyecto); }
-  if (valorizacion) { query += ` AND valorizacion = $${idx++}`; params.push(valorizacion); }
+  if (anio) { query += ` AND CAST(anio AS TEXT) = $${idx++}`; params.push(anio.toString().trim()); }
+  if (proyecto) { query += ` AND UPPER(TRIM(proyecto)) = UPPER(TRIM($${idx++}))`; params.push(proyecto); }
+  if (valorizacion) { query += ` AND UPPER(TRIM(valorizacion)) = UPPER(TRIM($${idx++}))`; params.push(valorizacion); }
   if (partida) { 
     query += ` AND (partida_codigo ILIKE $${idx} OR partida_descripcion ILIKE $${idx})`; 
-    params.push(`%${partida}%`); 
+    params.push(`%${partida.trim()}%`); 
     idx++; 
   }
   query += ' ORDER BY id ASC';
@@ -74,9 +107,18 @@ async function obtenerPartidasFiltradas(filtros) {
   const result = await pool.query(query, params);
   const partidas = result.rows;
 
-  for (let p of partidas) {
-    const archivosRes = await pool.query('SELECT * FROM documento_archivos WHERE documento_id = $1 ORDER BY id ASC', [p.id]);
-    p.archivos = archivosRes.rows;
+  if (partidas.length > 0) {
+    const ids = partidas.map(p => p.id);
+    const archivosRes = await pool.query(
+      'SELECT * FROM documento_archivos WHERE documento_id = ANY($1) ORDER BY id ASC',
+      [ids]
+    );
+    const mapaArchivos = {};
+    archivosRes.rows.forEach(a => {
+      if (!mapaArchivos[a.documento_id]) mapaArchivos[a.documento_id] = [];
+      mapaArchivos[a.documento_id].push(a);
+    });
+    partidas.forEach(p => { p.archivos = mapaArchivos[p.id] || []; });
   }
 
   if (estado === 'con_archivo') {
@@ -87,15 +129,224 @@ async function obtenerPartidasFiltradas(filtros) {
   return partidas;
 }
 
-// 1. Obtener todas las partidas
+// 2. Obtener datos de CEPRODER filtrados (Pestaña 3)
+async function obtenerDatosCeproder(filtros) {
+  const { proyecto, fInicio, fFin, valorizacion, adenda, partidas, comunidad, genero, edad, dni, nombres } = filtros;
+  
+  let query = 'SELECT * FROM reportes_ceproder WHERE 1=1';
+  let values = [];
+  let i = 1;
+
+  if (proyecto) {
+    query += ` AND UPPER(TRIM(proyecto)) = UPPER(TRIM($${i++}))`;
+    values.push(proyecto);
+  }
+  if (fInicio) {
+    query += ` AND fecha >= $${i++}`;
+    values.push(fInicio);
+  }
+  if (fFin) {
+    query += ` AND fecha <= $${i++}`;
+    values.push(fFin);
+  }
+  if (valorizacion) {
+    query += ` AND (CAST(valorizacion AS TEXT) = $${i} OR CAST(valorizacion AS TEXT) = LPAD($${i}, 2, '0') OR CAST(valorizacion AS TEXT) ILIKE '%' || $${i} || '%')`;
+    values.push(valorizacion.toString().trim());
+    i++;
+  }
+  if (adenda) {
+    query += ` AND (CAST(adenda AS TEXT) = $${i} OR CAST(adenda AS TEXT) = LPAD($${i}, 2, '0') OR CAST(adenda AS TEXT) ILIKE '%' || $${i} || '%')`;
+    values.push(adenda.toString().trim());
+    i++;
+  }
+  if (comunidad) {
+    query += ` AND UPPER(TRIM(comunidad)) = UPPER(TRIM($${i++}))`;
+    values.push(comunidad);
+  }
+  if (genero) {
+    query += ` AND UPPER(TRIM(genero)) = UPPER(TRIM($${i++}))`;
+    values.push(genero);
+  }
+  if (edad) {
+    query += ` AND CAST(edad AS TEXT) = $${i++}`;
+    values.push(edad.toString().trim());
+  }
+  if (dni) {
+    query += ` AND CAST(dni AS TEXT) ILIKE $${i++}`;
+    values.push(`%${dni.trim()}%`);
+  }
+  if (nombres) {
+    query += ` AND nombres_apellidos ILIKE $${i++}`;
+    values.push(`%${nombres.trim()}%`);
+  }
+  if (partidas && partidas.trim().length > 0) {
+    const arrayPartidas = partidas.split(',').map(p => p.trim()).filter(Boolean);
+    if (arrayPartidas.length > 0) {
+      query += ` AND TRIM(CAST(cod_partida AS TEXT)) = ANY($${i++})`;
+      values.push(arrayPartidas);
+    }
+  }
+
+  query += ' ORDER BY comunidad ASC, nombres_apellidos ASC LIMIT 5000';
+
+  const result = await pool.query(query, values);
+  return result.rows;
+}
+
+// ==================== RUTAS PESTAÑA 1 Y 2 ====================
+
 app.get('/api/documentos', async (req, res) => {
   try {
     const finalResult = await obtenerPartidasFiltradas(req.query);
     res.json(finalResult);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Error en GET /api/documentos:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// 2. Generar Reporte Excel
+app.post('/api/documentos', multiUpload, async (req, res) => {
+  try {
+    const { anio, proyecto, valorizacion, partida_codigo, partida_descripcion } = req.body;
+    const insertRes = await pool.query(
+      `INSERT INTO documentos_reporte (anio, proyecto, valorizacion, partida_codigo, partida_descripcion)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [anio, proyecto, valorizacion, partida_codigo, partida_descripcion]
+    );
+    const docId = insertRes.rows[0].id;
+
+    const grupos = [
+      { campo: 'pdfs', categoria: 'pdf' },
+      { campo: 'excels', categoria: 'excel' },
+      { campo: 'imagenes', categoria: 'imagen' }
+    ];
+
+    for (const g of grupos) {
+      const files = (req.files && req.files[g.campo]) || [];
+      for (const file of files) {
+        const { r2Key, archivoUrl } = await subirArchivoAR2(file, g.categoria, docId);
+        await pool.query(
+          `INSERT INTO documento_archivos (documento_id, categoria, nombre_original, archivo_url, r2_key)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [docId, g.categoria, file.originalname, archivoUrl, r2Key]
+        );
+      }
+    }
+
+    res.json({ ok: true, id: docId });
+  } catch (err) {
+    console.error('Error en POST /api/documentos:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/documentos/:id', multiUpload, async (req, res) => {
+  try {
+    const docId = req.params.id;
+    const { anio, proyecto, valorizacion, partida_codigo, partida_descripcion } = req.body;
+
+    await pool.query(
+      `UPDATE documentos_reporte
+       SET anio = $1, proyecto = $2, valorizacion = $3, partida_codigo = $4, partida_descripcion = $5
+       WHERE id = $6`,
+      [anio, proyecto, valorizacion, partida_codigo, partida_descripcion, docId]
+    );
+
+    const grupos = [
+      { campo: 'pdfs', categoria: 'pdf' },
+      { campo: 'excels', categoria: 'excel' },
+      { campo: 'imagenes', categoria: 'imagen' }
+    ];
+
+    for (const g of grupos) {
+      const files = (req.files && req.files[g.campo]) || [];
+      for (const file of files) {
+        const { r2Key, archivoUrl } = await subirArchivoAR2(file, g.categoria, docId);
+        await pool.query(
+          `INSERT INTO documento_archivos (documento_id, categoria, nombre_original, archivo_url, r2_key)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [docId, g.categoria, file.originalname, archivoUrl, r2Key]
+        );
+      }
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error en PUT /api/documentos/:id:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/archivos/:id', async (req, res) => {
+  try {
+    const fileRes = await pool.query('SELECT * FROM documento_archivos WHERE id = $1', [req.params.id]);
+    if (fileRes.rows.length > 0) {
+      const archivo = fileRes.rows[0];
+      if (archivo.r2_key) {
+        await s3Client.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: archivo.r2_key })).catch(() => {});
+      }
+      await pool.query('DELETE FROM documento_archivos WHERE id = $1', [req.params.id]);
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/documentos/:id', async (req, res) => {
+  try {
+    const archivosRes = await pool.query('SELECT * FROM documento_archivos WHERE documento_id = $1', [req.params.id]);
+    for (const arch of archivosRes.rows) {
+      if (arch.r2_key) {
+        await s3Client.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: arch.r2_key })).catch(() => {});
+      }
+    }
+    await pool.query('DELETE FROM documentos_reporte WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/documentos/:id/zip', async (req, res) => {
+  try {
+    const docRes = await pool.query('SELECT * FROM documentos_reporte WHERE id = $1', [req.params.id]);
+    if (docRes.rows.length === 0) return res.status(404).send('Partida no encontrada');
+    const doc = docRes.rows[0];
+
+    const archivosRes = await pool.query('SELECT * FROM documento_archivos WHERE documento_id = $1', [req.params.id]);
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="Partida_${doc.partida_codigo}.zip"`);
+
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    archive.pipe(res);
+
+    for (const arch of archivosRes.rows) {
+      if (arch.r2_key) {
+        const obj = await s3Client.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: arch.r2_key }));
+        archive.append(obj.Body, { name: `${arch.categoria.toUpperCase()}/${arch.nombre_original}` });
+      }
+    }
+
+    await archive.finalize();
+  } catch (err) {
+    console.error('Error al generar ZIP:', err);
+    res.status(500).send('Error al generar ZIP: ' + err.message);
+  }
+});
+
+app.get('/api/r2-file', async (req, res) => {
+  try {
+    const key = req.query.key;
+    if (!key) return res.status(400).send('Falta el parámetro key');
+    const obj = await s3Client.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key }));
+    if (obj.ContentType) res.setHeader('Content-Type', obj.ContentType);
+    obj.Body.pipe(res);
+  } catch (err) {
+    res.status(404).send('Archivo no encontrado en R2');
+  }
+});
+
 app.get('/api/reporte-excel', async (req, res) => {
   try {
     const partidas = await obtenerPartidasFiltradas(req.query);
@@ -232,135 +483,64 @@ app.get('/api/reporte-excel', async (req, res) => {
   }
 });
 
-// Función interna para subir a Cloudflare R2
-async function subirAR2(file) {
-  const fileKey = `uploads/${Date.now()}-${Math.round(Math.random() * 1E9)}-${file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_')}`;
-  await s3Client.send(new PutObjectCommand({
-    Bucket: BUCKET_NAME,
-    Key: fileKey,
-    Body: file.buffer,
-    ContentType: file.mimetype,
-  }));
-  return `${process.env.R2_PUBLIC_URL}/${fileKey}`;
-}
+// ==================== RUTAS PESTAÑA 3 (CEPRODER) ====================
 
-// Función interna para borrar de Cloudflare R2
-async function borrarDeR2(fileUrl) {
+// 1. Obtener datos con filtros
+app.get('/api/ceproder', async (req, res) => {
   try {
-    const urlParts = fileUrl.split('/');
-    const fileKey = `uploads/${urlParts[urlParts.length - 1]}`;
-    await s3Client.send(new DeleteObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: fileKey,
-    }));
-  } catch (err) {
-    console.error('Error al borrar de R2:', err);
+    const data = await obtenerDatosCeproder(req.query);
+    res.json(data);
+  } catch (error) {
+    console.error('❌ Error en GET /api/ceproder:', error.message);
+    res.status(500).json({ error: error.message });
   }
-}
-
-// 3. Crear partida y subir archivos a R2
-app.post('/api/documentos', multiUpload, async (req, res) => {
-  const { anio, proyecto, valorizacion, partida_codigo, partida_descripcion } = req.body;
-  try {
-    const docRes = await pool.query(
-      `INSERT INTO documentos_reporte (anio, proyecto, valorizacion, partida_codigo, partida_descripcion) 
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [anio, proyecto, valorizacion, partida_codigo, partida_descripcion]
-    );
-    const documento_id = docRes.rows[0].id;
-
-    const procesarArchivos = async (files, categoria) => {
-      if (!files) return;
-      for (let f of files) {
-        const fileUrl = await subirAR2(f);
-        await pool.query(
-          `INSERT INTO documento_archivos (documento_id, categoria, nombre_original, archivo_url, tipo_mimetype, tamanio_kb) 
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [documento_id, categoria, f.originalname, fileUrl, f.mimetype, Math.round(f.size / 1024)]
-        );
-      }
-    };
-
-    if (req.files) {
-      await procesarArchivos(req.files['pdfs'], 'pdf');
-      await procesarArchivos(req.files['excels'], 'excel');
-      await procesarArchivos(req.files['imagenes'], 'imagen');
-    }
-
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 4. Actualizar partida y adjuntar más archivos a R2
-app.put('/api/documentos/:id', multiUpload, async (req, res) => {
-  const { id } = req.params;
-  const { anio, proyecto, valorizacion, partida_codigo, partida_descripcion } = req.body;
+// 2. Exportar a Excel con filtros aplicados
+app.get('/api/ceproder/exportar', async (req, res) => {
   try {
-    const existentes = await pool.query(
-      'SELECT categoria, COUNT(*) as total FROM documento_archivos WHERE documento_id = $1 GROUP BY categoria',
-      [id]
-    );
-    const conteo = { pdf: 0, excel: 0, imagen: 0 };
-    existentes.rows.forEach(r => conteo[r.categoria] = parseInt(r.total));
+    const data = await obtenerDatosCeproder(req.query);
+    
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Registros CEPRODER');
 
-    const nuevosPdfs = (req.files && req.files['pdfs']) ? req.files['pdfs'].length : 0;
-    const nuevosExcels = (req.files && req.files['excels']) ? req.files['excels'].length : 0;
-    const nuevasImgs = (req.files && req.files['imagenes']) ? req.files['imagenes'].length : 0;
+    worksheet.columns = [
+      { header: 'N°', key: 'nro_registro', width: 10 },
+      { header: 'NOMBRES Y APELLIDOS', key: 'nombres_apellidos', width: 35 },
+      { header: 'DNI', key: 'dni', width: 15 },
+      { header: 'EDAD', key: 'edad', width: 10 },
+      { header: 'GÉNERO', key: 'genero', width: 10 },
+      { header: 'COMUNIDAD', key: 'comunidad', width: 20 },
+      { header: 'SECTOR', key: 'sector', width: 20 },
+      { header: 'CARGO', key: 'cargo', width: 20 },
+      { header: 'ACTIVIDAD / DESCRIPCION', key: 'actividad', width: 40 },
+      { header: 'PROYECTO', key: 'proyecto', width: 25 },
+      { header: 'VALORIZACION', key: 'valorizacion', width: 15 },
+      { header: 'COD. PARTIDA', key: 'cod_partida', width: 15 }
+    ];
 
-    if (conteo.pdf + nuevosPdfs > 10) return res.status(400).json({ error: `Esta partida ya tiene ${conteo.pdf} PDF(s). Máximo permitido: 10.` });
-    if (conteo.excel + nuevosExcels > 10) return res.status(400).json({ error: `Esta partida ya tiene ${conteo.excel} Excel(es). Máximo permitido: 10.` });
-    if (conteo.imagen + nuevasImgs > 100) return res.status(400).json({ error: `Esta partida ya tiene ${conteo.imagen} Fotografía(s). Máximo permitido: 100.` });
+    data.forEach(row => worksheet.addRow(row));
 
-    await pool.query(
-      `UPDATE documentos_reporte SET anio=$1, proyecto=$2, valorizacion=$3, partida_codigo=$4, partida_descripcion=$5 WHERE id=$6`,
-      [anio, proyecto, valorizacion, partida_codigo, partida_descripcion, id]
-    );
-
-    const procesarArchivos = async (files, categoria) => {
-      if (!files) return;
-      for (let f of files) {
-        const fileUrl = await subirAR2(f);
-        await pool.query(
-          `INSERT INTO documento_archivos (documento_id, categoria, nombre_original, archivo_url, tipo_mimetype, tamanio_kb) 
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [id, categoria, f.originalname, fileUrl, f.mimetype, Math.round(f.size / 1024)]
-        );
-      }
-    };
-
-    if (req.files) {
-      await procesarArchivos(req.files['pdfs'], 'pdf');
-      await procesarArchivos(req.files['excels'], 'excel');
-      await procesarArchivos(req.files['imagenes'], 'imagen');
-    }
-
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="Reporte_CEPRODER.xlsx"');
+    
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
 });
 
-// 5. Eliminar un archivo individual (de BD y de R2)
-app.delete('/api/archivos/:id', async (req, res) => {
+// 3. Obtener Partidas únicas para los filtros
+app.get('/api/ceproder/partidas', async (req, res) => {
   try {
-    const fileRes = await pool.query('SELECT archivo_url FROM documento_archivos WHERE id = $1', [req.params.id]);
-    if (fileRes.rows.length > 0) {
-      await borrarDeR2(fileRes.rows[0].archivo_url);
-      await pool.query('DELETE FROM documento_archivos WHERE id = $1', [req.params.id]);
-    }
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    const result = await pool.query('SELECT DISTINCT cod_partida FROM reportes_ceproder WHERE cod_partida IS NOT NULL ORDER BY cod_partida');
+    res.json(result.rows.map(r => r.cod_partida));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// 6. Eliminar partida completa (y sus archivos de R2)
-app.delete('/api/documentos/:id', async (req, res) => {
-  try {
-    const filesRes = await pool.query('SELECT archivo_url FROM documento_archivos WHERE documento_id = $1', [req.params.id]);
-    for (let f of filesRes.rows) {
-      await borrarDeR2(f.archivo_url);
-    }
-    await pool.query('DELETE FROM documentos_reporte WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
+// ==================== ENCENDER SERVIDOR ====================
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Servidor corriendo en http://localhost:${PORT}/reportes.html`));
