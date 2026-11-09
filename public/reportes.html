@@ -230,9 +230,12 @@
       <div class="card p-3 mb-3">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h5 class="fw-bold text-primary m-0">Resumen de Beneficiarios por Comunidad</h5>
-          <button class="btn btn-outline-success btn-sm fw-bold" onclick="exportarResumenExcel()">EXPORTAR RESUMEN</button>
+          <div class="d-flex align-items-center gap-2">
+            <span id="contadorResumen" class="badge bg-primary" style="font-size: 13px;">Total beneficiarios: 0</span>
+            <button class="btn btn-outline-success btn-sm fw-bold" onclick="exportarResumenExcel()">EXPORTAR RESUMEN</button>
+          </div>
         </div>
-        <div class="table-container" style="max-height: 250px;">
+        <div class="table-container" style="max-height: 280px;">
           <table id="tablaResumenComunidades" class="table table-dark table-striped table-sm text-center mb-0">
             <thead>
               <tr>
@@ -373,23 +376,79 @@
   const modalVisor = new bootstrap.Modal(document.getElementById('modalVisor'));
   const modalFormulario = new bootstrap.Modal(document.getElementById('modalFormulario'));
 
+  // Listado oficial de 47 comunidades según archivo lista Comunidades.xlsx
   const comunidadesCeproder = [
-    "ANTUYO", "ALLAHUA", "ANDRES AVELINO CÁCERES", "CONGOTA - ARCOSPAMPA", "AYAHUILLCA", 
-    "CARMEN ALTO", "CCARAMPA", "CCAHUAPIRHUA", "CCASA", "CHICÑAHUI", "CHILA", "CHOAQUERE", 
-    "CHOCCOYO", "CHOQUECCA ANTIO", "CHUICUNI", "CHUMILLE", "CUCHUHUACHO", "ESCORNO", 
-    "HUANACOPAMPA", "HUANCUIRE", "TAMBOBAMBA-HUANCUIRE", "LLAULLIYOC", "MANUEL SEOANE CORRALES", 
-    "MINASCUCHO", "MIRAFLORES", "ÑAHUINLLA", "PALCCA", "PATABAMBA", "PATAHUASI", "PATARCANCHA", 
-    "PATARIO", "PATRON SANTIAGO", "PISACCASA, YURICANCHA, HUARUMA", "PITIC", "PROGRESO", 
-    "PUMAMARCA", "QUIHUINCHA", "QUEHUIRA", "QQUELLO", "QUEULLABAMBA", "QUEUÑA", 
-    "RECORD CCONCCACCA", "SACSAHUILLCA", "SAN MIGUEL", "SORCCO", "TAMBULLA"
+    "ALLAHUA",
+    "ANDRES AVELINO CACERES",
+    "ANTUYO",
+    "AYAHUILLCA",
+    "CARMEN ALTO",
+    "CARMEN ALTO CCARAMPA",
+    "CCAHUAPIRHUA",
+    "CCASA",
+    "CHICÑAHUI",
+    "CHILA",
+    "CHOAQUERE",
+    "CHOCCOYO",
+    "CHOQUECCA ANTIO",
+    "CHUICUNI",
+    "CHUMILLE",
+    "CUCHUHUACHO",
+    "ESCORNO",
+    "HUANACOPAMPA",
+    "HUANCUIRE_F",
+    "HUANCUIRE",
+    "LLAULLIYOC",
+    "MANUEL SEOANE CORRALES",
+    "MINASCUCHO",
+    "MIRAFLORES",
+    "ÑAHUINLLA",
+    "PALCCA PICOSAYHUAS",
+    "PATABAMBA",
+    "PATAHUASI",
+    "PATARCANCHA",
+    "PATARIO",
+    "PATRON SANTIAGO",
+    "PISACCASA YURICANCHA HUARUMA",
+    "PITIC",
+    "PROGRESO",
+    "PUMAMARCA",
+    "QUEHUINCHA",
+    "QUEHUIRA",
+    "QUELLO",
+    "QUEULLABAMBA",
+    "QUEUÑA",
+    "RECORD CCONCCACCA",
+    "SACSAHUILLCA",
+    "SAN MIGUEL",
+    "SORCCO",
+    "TAMBULLA",
+    "CONGOTA ARCOSPAMPA",
+    "CCARAMPA"
   ];
+
+  // Función auxiliar para normalizar nombres de comunidades (ignora tildes, comas, guiones y espacios extra)
+  function normalizarTextoComunidad(str) {
+    if (!str) return "";
+    return str
+      .toString()
+      .trim()
+      .toUpperCase()
+      .replace(/Ñ/g, '__ENIE__')
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/__ENIE__/g, 'Ñ')
+      .replace(/[,.-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
 
   // ==================== INICIALIZACIÓN ====================
   async function init() {
-    await cargarDatos();
-    llenarFiltros();
     llenarComunidadesCeproder();
     actualizarPartidas();
+    await cargarDatos();
+    llenarFiltros();
   }
 
   async function cargarDatos(params = '') {
@@ -416,9 +475,8 @@
 
   function llenarComunidadesCeproder() {
     const select = document.getElementById('comunidadFiltro');
-    comunidadesCeproder.forEach(c => {
-      select.innerHTML += `<option value="${c}">${c}</option>`;
-    });
+    select.innerHTML = '<option value="">Todas</option>' + 
+      comunidadesCeproder.map(c => `<option value="${c}">${c}</option>`).join('');
   }
 
   // ==================== LÓGICA PESTAÑA 1 Y 2 ====================
@@ -767,13 +825,13 @@
     }
 
     let html = "";
-    data.forEach(r => {
+    data.forEach((r, idx) => {
       let btnVer = r.documento_adjunto 
         ? `<a href="${r.documento_adjunto}" target="_blank" class="btn btn-info btn-sm fw-bold text-white">VER</a>` 
         : `<button class="btn btn-secondary btn-sm fw-bold" disabled>VER</button>`;
 
       html += `<tr>
-        <td>${r.nro_registro || ''}</td><td>${r.nombres_apellidos || ''}</td><td>${r.dni || ''}</td>
+        <td>${r.nro_registro || (idx + 1)}</td><td>${r.nombres_apellidos || ''}</td><td>${r.dni || ''}</td>
         <td>${r.edad || ''}</td><td>${r.genero || ''}</td><td>${r.comunidad || ''}</td>
         <td>${r.sector || ''}</td><td>${r.cargo || ''}</td><td>${r.material || ''}</td>
         <td>${r.cantidad || ''}</td><td>${r.cultivo || ''}</td><td>${r.especialista || ''}</td>
@@ -794,22 +852,73 @@
   function renderResumenComunidad(data) {
     const tbody = document.getElementById('tablaResumen');
     let htmlResumen = "";
-    
-    comunidadesCeproder.forEach((com, index) => {
-      let cantidad = data.filter(r => {
-        if (!r.comunidad) return false;
-        return r.comunidad.toString().trim().toUpperCase() === com.toString().trim().toUpperCase();
-      }).length;
+    let totalContabilizado = 0;
 
-      if (cantidad > 0) {
-        htmlResumen += `<tr><td>${index + 1}</td><td class="text-start">${com}</td><td class="fw-bold fs-6">${cantidad}</td></tr>`;
+    // Crear mapa de conteo inicializado en 0 para las 47 comunidades oficiales
+    const mapaConteo = new Map();
+    const mapaClaveOficial = new Map();
+
+    comunidadesCeproder.forEach(com => {
+      mapaConteo.set(com, 0);
+      mapaClaveOficial.set(normalizarTextoComunidad(com), com);
+    });
+
+    // Aliases conocidos en BD para empatar con el listado oficial del Excel
+    const aliasComunidades = {
+      "PALCCA": "PALCCA PICOSAYHUAS",
+      "QUIHUINCHA": "QUEHUINCHA",
+      "QQUELLO": "QUELLO",
+      "TAMBOBAMBA HUANCUIRE": "HUANCUIRE"
+    };
+
+    let sinCoincidencia = 0;
+
+    // Contar cada registro de data exactamente una vez
+    data.forEach(r => {
+      const claveReg = normalizarTextoComunidad(r.comunidad);
+      let comOficial = mapaClaveOficial.get(claveReg);
+
+      if (!comOficial && aliasComunidades[claveReg]) {
+        comOficial = aliasComunidades[claveReg];
+      }
+
+      if (comOficial && mapaConteo.has(comOficial)) {
+        mapaConteo.set(comOficial, mapaConteo.get(comOficial) + 1);
+      } else {
+        sinCoincidencia++;
       }
     });
 
-    if (htmlResumen === "") {
-      htmlResumen = "<tr><td colspan='3' class='text-muted'>No hay registros para resumir.</td></tr>";
+    // Renderizar SIEMPRE las 47 comunidades (incluso si tienen 0)
+    comunidadesCeproder.forEach((com, index) => {
+      const cantidad = mapaConteo.get(com) || 0;
+      totalContabilizado += cantidad;
+      const claseCantidad = cantidad > 0 ? "fw-bold fs-6 text-info" : "text-secondary";
+      htmlResumen += `<tr>
+        <td>${index + 1}</td>
+        <td class="text-start">${com}</td>
+        <td class="${claseCantidad}">${cantidad}</td>
+      </tr>`;
+    });
+
+    // Si en la BD existen registros sin comunidad o con un nombre fuera de las 47, se muestran para que el total cuadre siempre al 100%
+    if (sinCoincidencia > 0) {
+      totalContabilizado += sinCoincidencia;
+      htmlResumen += `<tr class="table-warning text-dark">
+        <td>${comunidadesCeproder.length + 1}</td>
+        <td class="text-start fw-bold">SIN ESPECIFICAR / OTRAS COMUNIDADES EN BD</td>
+        <td class="fw-bold fs-6">${sinCoincidencia}</td>
+      </tr>`;
     }
+
+    // Fila de Total General
+    htmlResumen += `<tr class="table-primary text-white fw-bold">
+      <td colspan="2" class="text-end">TOTAL DE BENEFICIARIOS / REGISTROS:</td>
+      <td class="fs-6">${totalContabilizado}</td>
+    </tr>`;
+
     tbody.innerHTML = htmlResumen;
+    document.getElementById('contadorResumen').innerText = "Total beneficiarios: " + totalContabilizado;
   }
 
   // ==================== FUNCIONES DE EXPORTACIÓN A EXCEL ====================

@@ -160,7 +160,7 @@ async function obtenerDatosCeproder(filtros) {
     i++;
   }
   if (comunidad) {
-    query += ` AND UPPER(TRIM(comunidad)) = UPPER(TRIM($${i++}))`;
+    query += ` AND REGEXP_REPLACE(UPPER(TRIM(comunidad)), '[,.-]+|\\s+', ' ', 'g') = REGEXP_REPLACE(UPPER(TRIM($${i++})), '[,.-]+|\\s+', ' ', 'g')`;
     values.push(comunidad);
   }
   if (genero) {
@@ -187,7 +187,7 @@ async function obtenerDatosCeproder(filtros) {
     }
   }
 
-  query += ' ORDER BY comunidad ASC, nombres_apellidos ASC LIMIT 5000';
+  query += ' ORDER BY comunidad ASC, nombres_apellidos ASC';
 
   const result = await pool.query(query, values);
   return result.rows;
