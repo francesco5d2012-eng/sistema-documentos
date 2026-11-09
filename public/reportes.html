@@ -28,7 +28,6 @@
     
     .bg-purple-header { background-color: #5b21b6 !important; color: #ffffff !important; }
     .bg-purple-cell { background-color: #f3e8ff !important; color: #5b21b6 !important; font-weight: 700; }
-    .bg-adjunto-cell { background-color: #eff6ff !important; }
     
     /* Buscador encima de cada tabla */
     .buscador-tabla { background-color: #0f172a; border: 1px solid #3b82f6; color: #ffffff; font-size: 0.85rem; }
@@ -63,7 +62,7 @@
         </button>
       </li>
       <li class="nav-item">
-        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-panel-ceproder" id="btn-tab-ceproder" onclick="cargarDatosCeproder()">
+        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-panel-ceproder" id="btn-tab-ceproder">
           <i class="bi bi-bar-chart-line me-1"></i>3. Panel de Control - Reportes CEPRODER
         </button>
       </li>
@@ -288,7 +287,7 @@
               </tr>
             </thead>
             <tbody id="tablaResumen">
-              <tr><td colspan="3" class="text-secondary p-3">Esperando filtros...</td></tr>
+              <tr><td colspan="3" class="text-secondary p-3">Haz clic en "Filtrar Datos" para mostrar el resumen.</td></tr>
             </tbody>
           </table>
         </div>
@@ -320,12 +319,11 @@
                 <th>HECT.</th><th>OVINO ADULTO</th><th>OVINO BORREGO</th><th>OVINO CORDERO</th>
                 <th>VACUNO ADULTO</th><th>VACUNO BAQUILLA</th><th>VACUNO BECERRO</th><th>CAMELIDO ADULTO</th><th>CAMELIDO BAQUILLA</th><th>CAMELIDO BECERRO</th><th>PROYECTO</th><th>ADENDA</th>
                 <th class="bg-purple-header">VALORIZACION</th><th class="bg-purple-header">COD. DE PARTIDA</th>
-                <th>DOCUMENTO ADJUNTO</th>
                 <th>DEPARTAMENTO</th><th>PROVINCIA</th><th>DISTRITO</th>
               </tr>
             </thead>
             <tbody id="tablaResultados">
-              <tr><td colspan="32" class="text-secondary p-4">Haz clic en "Filtrar Datos" para mostrar los registros.</td></tr>
+              <tr><td colspan="31" class="text-secondary p-4">Haz clic en "Filtrar Datos" para mostrar los registros.</td></tr>
             </tbody>
           </table>
         </div>
@@ -620,7 +618,6 @@
       { v: "9.00", t: "9.00 Carreta agricola multipropósito, capacidad 4 toneladas - CC Huanacopampa" }
     ]
   };
-  // Alias de respaldo por si en algún registro figura el nombre corto
   dependenciasPartidas["AGRICULTURA FAMILIAR PROGRESO COYLLURQUI"] = dependenciasPartidas["DESARROLLO AGROPECUARIO AGRICULTURA FAMILIAR PROGRESO COYLLURQUI"];
 
   // Función auxiliar para normalizar textos (sin tildes, comas ni espacios extra)
@@ -648,9 +645,7 @@
     let visibles = 0;
 
     filas.forEach(tr => {
-      // No ocultar la fila de TOTAL GENERAL en el resumen si existe
       if (tr.classList.contains('fila-total-fija')) return;
-      // Si es fila de mensaje vacío ("Esperando filtros...", etc.)
       if (tr.cells.length === 1 && tr.cells[0].colSpan > 1) return;
 
       const contenidoFila = normalizarTexto(tr.innerText);
@@ -1003,19 +998,12 @@
     actualizarEtiqueta();
   }
 
-  async function cargarDatosCeproder() {
-    if (datosCeproderGlobal.length === 0) {
-      buscarDatosCeproder();
-    }
-  }
-
   async function buscarDatosCeproder() {
     let partidasSeleccionadas = [];
     document.querySelectorAll('.check-partida:checked').forEach(cb => {
       partidasSeleccionadas.push(cb.value);
     });
 
-    // Limpiar buscadores locales de tabla al hacer nueva consulta
     if (document.getElementById('buscadorResumen')) document.getElementById('buscadorResumen').value = '';
     if (document.getElementById('buscadorRegistros')) document.getElementById('buscadorRegistros').value = '';
 
@@ -1034,7 +1022,7 @@
     });
 
     try {
-      document.getElementById('tablaResultados').innerHTML = '<tr><td colspan="32" class="text-center p-4 text-dark"><div class="spinner-border text-primary" role="status"></div> Cargando datos...</td></tr>';
+      document.getElementById('tablaResultados').innerHTML = '<tr><td colspan="31" class="text-center p-4 text-dark"><div class="spinner-border text-primary" role="status"></div> Cargando datos...</td></tr>';
       
       const res = await fetch('/api/ceproder?' + params.toString());
       
@@ -1055,23 +1043,19 @@
 
     } catch (error) {
       console.error("Error al buscar datos:", error);
-      document.getElementById('tablaResultados').innerHTML = `<tr><td colspan="32" class="text-danger fw-bold p-4">Error al consultar BD: ${error.message}</td></tr>`;
+      document.getElementById('tablaResultados').innerHTML = `<tr><td colspan="31" class="text-danger fw-bold p-4">Error al consultar BD: ${error.message}</td></tr>`;
     }
   }
 
   function renderTablaCeproder(data) {
     const tbody = document.getElementById('tablaResultados');
     if (data.length === 0) {
-      tbody.innerHTML = "<tr><td colspan='32' class='text-secondary p-4'>No se encontraron registros con esos filtros.</td></tr>";
+      tbody.innerHTML = "<tr><td colspan='31' class='text-secondary p-4'>No se encontraron registros con esos filtros.</td></tr>";
       return;
     }
 
     let html = "";
     data.forEach((r, idx) => {
-      let btnVer = r.documento_adjunto 
-        ? `<a href="${r.documento_adjunto}" target="_blank" class="btn btn-primary btn-sm fw-bold">VER</a>` 
-        : `<button class="btn btn-outline-secondary btn-sm" disabled>VER</button>`;
-
       html += `<tr>
         <td class="fw-bold">${r.nro_registro || (idx + 1)}</td>
         <td class="text-start fw-semibold">${r.nombres_apellidos || ''}</td>
@@ -1101,7 +1085,6 @@
         <td>${r.adenda || ''}</td>
         <td class="bg-purple-cell">${r.valorizacion || ''}</td>
         <td class="bg-purple-cell">${r.cod_partida || ''}</td>
-        <td class="bg-adjunto-cell">${btnVer}</td>
         <td>${r.departamento || ''}</td>
         <td>${r.provincia || ''}</td>
         <td>${r.distrito || ''}</td>
