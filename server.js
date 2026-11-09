@@ -138,8 +138,14 @@ async function obtenerDatosCeproder(filtros) {
   let i = 1;
 
   if (proyecto) {
-    query += ` AND UPPER(TRIM(proyecto)) = UPPER(TRIM($${i++}))`;
-    values.push(proyecto);
+    if (proyecto.toUpperCase().includes('PROGRESO COYLLURQUI')) {
+      query += ` AND UPPER(TRIM(proyecto)) ILIKE '%PROGRESO COYLLURQUI%'`;
+    } else if (proyecto.toUpperCase().includes('16 COMUNIDADES')) {
+      query += ` AND UPPER(TRIM(proyecto)) ILIKE '%16 COMUNIDADES%'`;
+    } else {
+      query += ` AND UPPER(TRIM(proyecto)) = UPPER(TRIM($${i++}))`;
+      values.push(proyecto);
+    }
   }
   if (fInicio) {
     query += ` AND fecha >= $${i++}`;

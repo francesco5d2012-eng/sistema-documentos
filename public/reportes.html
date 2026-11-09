@@ -11,19 +11,31 @@
     .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 10px; }
     .nav-pills .nav-link { color: #94a3b8; font-weight: 500; border-radius: 8px; padding: 10px 20px; }
     .nav-pills .nav-link.active { background-color: #2563eb; color: #fff; }
-    .table-dark { --bs-table-bg: #1e293b; --bs-table-striped-bg: #263349; border-color: #334155; }
-    .badge-codigo { background-color: #3b82f6; color: #fff; font-size: 0.85rem; padding: 5px 10px; border-radius: 6px; display: inline-block; }
+    .badge-codigo { background-color: #1d4ed8; color: #fff; font-size: 0.82rem; padding: 4px 10px; border-radius: 6px; display: inline-block; font-weight: 600; }
     .form-control, .form-select { background-color: #0f172a; border-color: #334155; color: #f8fafc; }
     .form-control:focus, .form-select:focus { background-color: #0f172a; border-color: #3b82f6; color: #fff; box-shadow: none; }
-    .file-chip { background: #0f172a; border: 1px solid #334155; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 4px; width: 100%; max-width: 220px; }
-    .file-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px; }
+    
+    /* Chips de archivos adaptados para tabla clara */
+    .file-chip { background: #f1f5f9; border: 1px solid #cbd5e1; color: #1e293b; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 4px; width: 100%; max-width: 230px; }
+    .file-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; font-weight: 500; color: #0f172a; }
     .col-archivos { width: 18%; vertical-align: top; }
     
-    /* Estilos específicos para la Pestaña 3 */
-    .table-ceproder th { background-color: #2563eb !important; color: white; position: sticky; top: 0; z-index: 2; white-space: nowrap; }
-    .table-container { max-height: 500px; overflow: auto; background: #1e293b; border-radius: 8px; }
-    .bg-purple { background-color: #6f42c1 !important; color: white !important; }
-    .dropdown-menu-dark { max-height: 300px; overflow-y: auto; min-width: 300px; }
+    /* Diseño de Tablas Claras y Modernas */
+    .table-container { max-height: 500px; overflow: auto; background: #ffffff; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+    .table-clara { --bs-table-bg: #ffffff; --bs-table-color: #1e293b; --bs-table-striped-bg: #f8fafc; --bs-table-striped-color: #1e293b; --bs-table-hover-bg: #eff6ff; --bs-table-hover-color: #0f172a; border-color: #e2e8f0; color: #1e293b !important; margin-bottom: 0; }
+    .table-clara thead th { background-color: #1d4ed8 !important; color: #ffffff !important; position: sticky; top: 0; z-index: 2; white-space: nowrap; font-weight: 600; border-bottom: 2px solid #1e40af; padding: 10px 8px; font-size: 0.82rem; letter-spacing: 0.3px; }
+    .table-clara tbody td { color: #1e293b; border-color: #e2e8f0; padding: 7px 8px; font-size: 0.85rem; vertical-align: middle; }
+    
+    .bg-purple-header { background-color: #5b21b6 !important; color: #ffffff !important; }
+    .bg-purple-cell { background-color: #f3e8ff !important; color: #5b21b6 !important; font-weight: 700; }
+    .bg-adjunto-cell { background-color: #eff6ff !important; }
+    
+    /* Buscador encima de cada tabla */
+    .buscador-tabla { background-color: #0f172a; border: 1px solid #3b82f6; color: #ffffff; font-size: 0.85rem; }
+    .buscador-tabla::placeholder { color: #94a3b8; }
+    
+    .dropdown-menu-dark { max-height: 360px; overflow-y: auto; min-width: 420px; }
+    .partida-item-label { white-space: normal; line-height: 1.25; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -93,7 +105,7 @@
             </select>
           </div>
           <div class="col-md-3">
-            <label class="form-label small text-secondary">Buscar Partida</label>
+            <label class="form-label small text-secondary">Buscar Partida (BD)</label>
             <div class="input-group">
               <input type="text" id="filtro-partida" class="form-control" placeholder="Código o descripción...">
               <button class="btn btn-primary" onclick="aplicarFiltros()"><i class="bi bi-funnel"></i></button>
@@ -104,15 +116,26 @@
       </div>
 
       <div class="card p-3">
-        <div class="table-responsive">
-          <table class="table table-dark table-striped table-hover align-middle mb-0">
+        <div class="row align-items-center mb-2 g-2">
+          <div class="col-md-6">
+            <h6 class="fw-bold text-info m-0"><i class="bi bi-table me-1"></i>Listado de Partidas y Archivos</h6>
+          </div>
+          <div class="col-md-6">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-primary text-white border-primary"><i class="bi bi-search"></i></span>
+              <input type="text" class="form-control buscador-tabla" placeholder="Buscar en toda esta tabla (cualquier columna o fila)..." onkeyup="filtrarTablaVista('tabla-reportes', this.value)">
+            </div>
+          </div>
+        </div>
+        <div class="table-container">
+          <table class="table table-clara table-striped table-hover align-middle">
             <thead>
               <tr>
                 <th style="width: 10%;">Valorización</th>
                 <th style="width: 30%;">Código / Partida</th>
-                <th class="col-archivos"><i class="bi bi-file-earmark-pdf text-danger me-1"></i>PDFs</th>
-                <th class="col-archivos"><i class="bi bi-file-earmark-excel text-success me-1"></i>Exceles</th>
-                <th class="col-archivos"><i class="bi bi-images text-info me-1"></i>Fotografías</th>
+                <th class="col-archivos"><i class="bi bi-file-earmark-pdf text-warning me-1"></i>PDFs</th>
+                <th class="col-archivos"><i class="bi bi-file-earmark-excel text-info me-1"></i>Exceles</th>
+                <th class="col-archivos"><i class="bi bi-images text-light me-1"></i>Fotografías</th>
                 <th class="text-end" style="width: 6%;">ZIP</th>
               </tr>
             </thead>
@@ -125,14 +148,25 @@
     <!-- ==================== PESTAÑA 2: GESTIÓN CRUD ==================== -->
     <div class="tab-pane fade" id="tab-gestion">
       <div class="card p-3">
-        <div class="table-responsive">
-          <table class="table table-dark table-hover align-middle mb-0">
+        <div class="row align-items-center mb-2 g-2">
+          <div class="col-md-6">
+            <h6 class="fw-bold text-info m-0"><i class="bi bi-gear-fill me-1"></i>Gestión de Partidas Cargadas</h6>
+          </div>
+          <div class="col-md-6">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-primary text-white border-primary"><i class="bi bi-search"></i></span>
+              <input type="text" class="form-control buscador-tabla" placeholder="Buscar en toda esta tabla (cualquier columna o fila)..." onkeyup="filtrarTablaVista('tabla-gestion', this.value)">
+            </div>
+          </div>
+        </div>
+        <div class="table-container">
+          <table class="table table-clara table-striped table-hover align-middle">
             <thead>
               <tr>
                 <th style="width: 34%;">Código / Partida</th>
-                <th class="col-archivos"><i class="bi bi-file-earmark-pdf text-danger me-1"></i>PDFs</th>
-                <th class="col-archivos"><i class="bi bi-file-earmark-excel text-success me-1"></i>Exceles</th>
-                <th class="col-archivos"><i class="bi bi-images text-info me-1"></i>Fotografías</th>
+                <th class="col-archivos"><i class="bi bi-file-earmark-pdf text-warning me-1"></i>PDFs</th>
+                <th class="col-archivos"><i class="bi bi-file-earmark-excel text-info me-1"></i>Exceles</th>
+                <th class="col-archivos"><i class="bi bi-images text-light me-1"></i>Fotografías</th>
                 <th class="text-end" style="width: 12%;">Acciones</th>
               </tr>
             </thead>
@@ -156,10 +190,11 @@
             <select id="proyectoFiltro" class="form-select form-select-sm" onchange="actualizarPartidas()">
               <option value="">Todos</option>
               <option value="AGRICULTURA FAMILIAR">AGRICULTURA FAMILIAR</option>
-              <option value="AGRICULTURA FAMILIAR PROGRESO COYLLURQUI">AGRICULTURA FAMILIAR PROGRESO COYLLURQUI</option>
+              <option value="DESARROLLO AGROPECUARIO AGRICULTURA FAMILIAR PROGRESO COYLLURQUI">DESARROLLO AGROPECUARIO AGRICULTURA FAMILIAR PROGRESO COYLLURQUI</option>
               <option value="CADENA PRODUCTIVA">CADENA PRODUCTIVA</option>
               <option value="DESARROLLO AGROPECUARIO HUANCUIRE">DESARROLLO AGROPECUARIO HUANCUIRE</option>
               <option value="FORESTACION">FORESTACION</option>
+              <option value="FORTALECIMIENTO PRODUCTIVO AGROPECUARIO PARA 16 COMUNIDADES">FORTALECIMIENTO PRODUCTIVO AGROPECUARIO PARA 16 COMUNIDADES</option>
             </select>
           </div>
           <div class="col-md-2">
@@ -185,10 +220,10 @@
           <div class="col-md-2">
             <label class="form-label small fw-bold">Cód. Partida (Múltiple)</label>
             <div class="dropdown">
-              <button class="btn btn-sm btn-outline-light w-100 dropdown-toggle text-start" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="btnPartidas">
+              <button class="btn btn-sm btn-outline-light w-100 dropdown-toggle text-start text-truncate" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" id="btnPartidas">
                 Seleccionar...
               </button>
-              <ul class="dropdown-menu dropdown-menu-dark p-2" id="listaPartidas" style="width: 300px;"></ul>
+              <ul class="dropdown-menu dropdown-menu-dark p-2 shadow-lg" id="listaPartidas" style="width: 420px;"></ul>
             </div>
           </div>
           <div class="col-md-2">
@@ -228,24 +263,32 @@
 
       <!-- Tabla Resumen -->
       <div class="card p-3 mb-3">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h5 class="fw-bold text-primary m-0">Resumen de Beneficiarios por Comunidad</h5>
-          <div class="d-flex align-items-center gap-2">
+        <div class="row align-items-center mb-2 g-2">
+          <div class="col-md-5">
+            <h5 class="fw-bold text-info m-0">Resumen de Beneficiarios por Comunidad</h5>
+          </div>
+          <div class="col-md-4">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-primary text-white border-primary"><i class="bi bi-search"></i></span>
+              <input type="text" id="buscadorResumen" class="form-control buscador-tabla" placeholder="Buscar comunidad o cantidad en esta tabla..." onkeyup="filtrarTablaVista('tablaResumen', this.value)">
+            </div>
+          </div>
+          <div class="col-md-3 d-flex justify-content-end align-items-center gap-2">
             <span id="contadorResumen" class="badge bg-primary" style="font-size: 13px;">Total beneficiarios: 0</span>
-            <button class="btn btn-outline-success btn-sm fw-bold" onclick="exportarResumenExcel()">EXPORTAR RESUMEN</button>
+            <button class="btn btn-success btn-sm fw-bold" onclick="exportarResumenExcel()"><i class="bi bi-file-earmark-excel me-1"></i>EXPORTAR RESUMEN</button>
           </div>
         </div>
-        <div class="table-container" style="max-height: 280px;">
-          <table id="tablaResumenComunidades" class="table table-dark table-striped table-sm text-center mb-0">
+        <div class="table-container" style="max-height: 290px;">
+          <table id="tablaResumenComunidades" class="table table-clara table-striped table-hover table-sm text-center">
             <thead>
               <tr>
-                <th style="width: 50px;">N°</th>
+                <th style="width: 60px;">N°</th>
                 <th class="text-start">Comunidad</th>
-                <th style="width: 200px;">Cantidad de Beneficiarios</th>
+                <th style="width: 220px;">Cantidad de Beneficiarios</th>
               </tr>
             </thead>
             <tbody id="tablaResumen">
-              <tr><td colspan="3" class="text-muted p-3">Esperando filtros...</td></tr>
+              <tr><td colspan="3" class="text-secondary p-3">Esperando filtros...</td></tr>
             </tbody>
           </table>
         </div>
@@ -253,12 +296,22 @@
 
       <!-- Tabla Principal -->
       <div class="card p-3 mb-3">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h5 class="fw-bold text-primary m-0">Registros Según filtros realizados</h5>
-          <button class="btn btn-outline-success btn-sm fw-bold" onclick="exportarRegistrosExcel()">EXPORTAR REGISTROS</button>
+        <div class="row align-items-center mb-2 g-2">
+          <div class="col-md-5">
+            <h5 class="fw-bold text-info m-0">Registros Según filtros realizados</h5>
+          </div>
+          <div class="col-md-4">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-primary text-white border-primary"><i class="bi bi-search"></i></span>
+              <input type="text" id="buscadorRegistros" class="form-control buscador-tabla" placeholder="Buscar por cualquier palabra, DNI, comunidad, actividad..." onkeyup="filtrarTablaVista('tablaResultados', this.value, 'contadorCeproder')">
+            </div>
+          </div>
+          <div class="col-md-3 d-flex justify-content-end">
+            <button class="btn btn-success btn-sm fw-bold" onclick="exportarRegistrosExcel()"><i class="bi bi-file-earmark-excel me-1"></i>EXPORTAR REGISTROS</button>
+          </div>
         </div>
         <div class="table-container">
-          <table id="tablaCeproder" class="table table-dark table-striped table-hover table-sm text-center mb-0">
+          <table id="tablaCeproder" class="table table-clara table-striped table-hover table-sm text-center">
             <thead>
               <tr>
                 <th>N°</th><th>NOMBRES Y APELLIDOS</th><th>DNI</th><th>EDAD</th><th>GÉNERO</th>
@@ -266,13 +319,13 @@
                 <th>CULTIVO/CRIANZA/FORRAJE</th><th>ESPECIALISTA</th><th>FECHA</th><th>ACTIVIDAD / DESCRIPCION</th>
                 <th>HECT.</th><th>OVINO ADULTO</th><th>OVINO BORREGO</th><th>OVINO CORDERO</th>
                 <th>VACUNO ADULTO</th><th>VACUNO BAQUILLA</th><th>VACUNO BECERRO</th><th>CAMELIDO ADULTO</th><th>CAMELIDO BAQUILLA</th><th>CAMELIDO BECERRO</th><th>PROYECTO</th><th>ADENDA</th>
-                <th class="bg-purple">VALORIZACION</th><th class="bg-purple">COD. DE PARTIDA</th>
-                <th class="bg-primary text-white">DOCUMENTO ADJUNTO</th>
+                <th class="bg-purple-header">VALORIZACION</th><th class="bg-purple-header">COD. DE PARTIDA</th>
+                <th>DOCUMENTO ADJUNTO</th>
                 <th>DEPARTAMENTO</th><th>PROVINCIA</th><th>DISTRITO</th>
               </tr>
             </thead>
             <tbody id="tablaResultados">
-              <tr><td colspan="32" class="text-muted p-4">Haz clic en "Filtrar Datos" para mostrar los registros.</td></tr>
+              <tr><td colspan="32" class="text-secondary p-4">Haz clic en "Filtrar Datos" para mostrar los registros.</td></tr>
             </tbody>
           </table>
         </div>
@@ -378,57 +431,200 @@
 
   // Listado oficial de 47 comunidades según archivo lista Comunidades.xlsx
   const comunidadesCeproder = [
-    "ALLAHUA",
-    "ANDRES AVELINO CACERES",
-    "ANTUYO",
-    "AYAHUILLCA",
-    "CARMEN ALTO",
-    "CARMEN ALTO CCARAMPA",
-    "CCAHUAPIRHUA",
-    "CCASA",
-    "CHICÑAHUI",
-    "CHILA",
-    "CHOAQUERE",
-    "CHOCCOYO",
-    "CHOQUECCA ANTIO",
-    "CHUICUNI",
-    "CHUMILLE",
-    "CUCHUHUACHO",
-    "ESCORNO",
-    "HUANACOPAMPA",
-    "HUANCUIRE_F",
-    "HUANCUIRE",
-    "LLAULLIYOC",
-    "MANUEL SEOANE CORRALES",
-    "MINASCUCHO",
-    "MIRAFLORES",
-    "ÑAHUINLLA",
-    "PALCCA PICOSAYHUAS",
-    "PATABAMBA",
-    "PATAHUASI",
-    "PATARCANCHA",
-    "PATARIO",
-    "PATRON SANTIAGO",
-    "PISACCASA YURICANCHA HUARUMA",
-    "PITIC",
-    "PROGRESO",
-    "PUMAMARCA",
-    "QUEHUINCHA",
-    "QUEHUIRA",
-    "QUELLO",
-    "QUEULLABAMBA",
-    "QUEUÑA",
-    "RECORD CCONCCACCA",
-    "SACSAHUILLCA",
-    "SAN MIGUEL",
-    "SORCCO",
-    "TAMBULLA",
-    "CONGOTA ARCOSPAMPA",
-    "CCARAMPA"
+    "ALLAHUA", "ANDRES AVELINO CACERES", "ANTUYO", "AYAHUILLCA", "CARMEN ALTO",
+    "CARMEN ALTO CCARAMPA", "CCAHUAPIRHUA", "CCASA", "CHICÑAHUI", "CHILA",
+    "CHOAQUERE", "CHOCCOYO", "CHOQUECCA ANTIO", "CHUICUNI", "CHUMILLE",
+    "CUCHUHUACHO", "ESCORNO", "HUANACOPAMPA", "HUANCUIRE_F", "HUANCUIRE",
+    "LLAULLIYOC", "MANUEL SEOANE CORRALES", "MINASCUCHO", "MIRAFLORES", "ÑAHUINLLA",
+    "PALCCA PICOSAYHUAS", "PATABAMBA", "PATAHUASI", "PATARCANCHA", "PATARIO",
+    "PATRON SANTIAGO", "PISACCASA YURICANCHA HUARUMA", "PITIC", "PROGRESO", "PUMAMARCA",
+    "QUEHUINCHA", "QUEHUIRA", "QUELLO", "QUEULLABAMBA", "QUEUÑA",
+    "RECORD CCONCCACCA", "SACSAHUILLCA", "SAN MIGUEL", "SORCCO", "TAMBULLA",
+    "CONGOTA ARCOSPAMPA", "CCARAMPA"
   ];
 
-  // Función auxiliar para normalizar nombres de comunidades (ignora tildes, comas, guiones y espacios extra)
-  function normalizarTextoComunidad(str) {
+  // Listado oficial completo de Partidas por Proyecto según relación con proyectos y partidas.xlsx
+  const dependenciasPartidas = {
+    "AGRICULTURA FAMILIAR": [
+      { v: "1.1.1", t: "1.1.1 Presentacion de Eca y prueba de caja inicial" },
+      { v: "1.1.2", t: "1.1.2 Capacitación ECAS en prácticas Agronómicas de los cultivos de papa, quinua, ajo y holantao" },
+      { v: "1.1.3", t: "1.1.3 Capacitación ECAS en evaluación y control de plagas y enfermedades de cultivos de papa, quinua, ajo y holantao" },
+      { v: "1.1.4", t: "1.1.4 Capacitación ECAS en cosecha y post cosecha de cultivos de papa, quinua, ajo y holantao" },
+      { v: "1.1.5", t: "1.1.5 Prueba final" },
+      { v: "1.2.1", t: "1.2.1 Implementación con maquina agrícola" },
+      { v: "1.2.1.A", t: "1.2.1.A Implementación con maquina agrícola (actualizado)" },
+      { v: "1.2.2", t: "1.2.2 Implementación con equipos agrícolas a CC. Arcospampa Congota" },
+      { v: "1.2.3", t: "1.2.3 Implementación de abono orgánico" },
+      { v: "1.2.4", t: "1.2.4 Implementación de agroquímicos" },
+      { v: "1.2.4.A", t: "1.2.4.A Implementación de agroquímicos (complementario)" },
+      { v: "1.2.5", t: "1.2.5 Implementación de abonos foliares" },
+      { v: "1.2.5.A", t: "1.2.5.A Implementación de abonos foliares (complementario)" },
+      { v: "1.3.1", t: "1.3.1 Implementación de semilla de quinua" },
+      { v: "1.3.2", t: "1.3.2 Implementación de agroquímicos" },
+      { v: "1.4.1", t: "1.4.1 Implementación de semilla de cebada" },
+      { v: "1.5.1", t: "1.5.1 Implementación de maquinaria agrícola" },
+      { v: "1.5.1.A", t: "1.5.1.A Implementación de maquinaria agrícola (actualizado)" },
+      { v: "1.5.2", t: "1.5.2 Implementación de abono orgánico y agroquímicos" },
+      { v: "1.5.2.A", t: "1.5.2.A Implementación de abono orgánico y agroquímicos" },
+      { v: "1.5.3", t: "1.5.3 Implementación de semilla de ajo" },
+      { v: "1.6.1", t: "1.6.1 Implementación de maquinaria agrícola (rastra)" },
+      { v: "1.6.1.A", t: "1.6.1.A Implementación de maquinaria agrícola (rastra)-actualizado" },
+      { v: "1.6.2", t: "1.6.2 Implementación de semilla de holantao" },
+      { v: "1.6.2.A", t: "1.6.2.A Implementación de semilla de holantao (actualizado)" },
+      { v: "1.6.3", t: "1.6.3 Implementación de agroquímicos" },
+      { v: "1.7.1", t: "1.7.1 Acompañamiento tecnico especializado (3 tec. 1 especialista incluye alimentacion)" },
+      { v: "2.1.1", t: "2.1.1 Eventos de generación de confianza, a través de revaloración de costumbres ancestrales" },
+      { v: "2.1.2", t: "2.1.2 Capacitación en fortalecimiento organizacional" },
+      { v: "2.1.3", t: "2.1.3 Formación de Red de productores para la comercialización" },
+      { v: "2.2.1", t: "2.2.1 Capacitación en costos de producción" },
+      { v: "2.2.2", t: "2.2.2 Elaboración de planes de negocio" },
+      { v: "3.1.1", t: "3.1.1 Capacitación en clasificación de productos de papa, quinua, ajo y holantao" },
+      { v: "3.2.1", t: "3.2.1 Capacitación en acceso a mercados de papa, quinua, ajo y holantao" },
+      { v: "3.2.2", t: "3.2.2 Acompañamiento para la articulación comercial" },
+      { v: "3.2.2.A", t: "3.2.2.A Acompañamiento para la articulación comercial (CONSULTORIA)" },
+      { v: "3.2.3", t: "3.2.3 Acopio de la producción de papa, quinua, ajo y holantao" }
+    ],
+    "CADENA PRODUCTIVA": [
+      { v: "1.1.1", t: "1.1.1 Capacitación ECAS en buenas prácticas de establecimiento de pasturas anuales y perennes (60 talleres)" },
+      { v: "1.1.2", t: "1.1.2 Capacitación ECAS en cosecha y conservación de pastos y forrajes (elaboración de heno y ensilado) (17 talleres)" },
+      { v: "1.2.1", t: "1.2.1 Implementación de maquinaria agricola (230 Ha)" },
+      { v: "1.2.1.B", t: "1.2.1.B Implementación de maquinaria agricola - rastra COMPLEMENTARIO" },
+      { v: "1.2.1.C", t: "1.2.1.C Implementación de maquinaria agricola COMPLEMENTARIO" },
+      { v: "1.2.2", t: "1.2.2 Implementación de semilla de avena forrajera (147 Ha)" },
+      { v: "1.2.2.A", t: "1.2.2.A Implementación de la maquinaria agricola (solo arado)" },
+      { v: "1.3.1", t: "1.3.1 Implementación de maquinaria agricola (12.5 Ha)" },
+      { v: "1.3.2", t: "1.3.2 Implementación de semilla de avena forrajera (12.5 Ha)" },
+      { v: "1.4.1", t: "1.4.1 Implementación de maquinaria agricola (24 Ha)" },
+      { v: "1.4.2", t: "1.4.2 Implementación de semilla de pastos perennes" },
+      { v: "1.5.1", t: "1.5.1 Implementación con módulo de enseñanza (1 tec. Alimentacion y materiales)" },
+      { v: "1.6.1", t: "1.6.1 Realización de pasantia inter regional (2 PASANTIAS)" },
+      { v: "1.6.1.B", t: "1.6.1.B Realización de pasantia inter regional (2 PASANTIAS)" },
+      { v: "2.1.1", t: "2.1.1 Campaña de desparasitación del ganado ovino y llamas" },
+      { v: "2.1.1.A", t: "2.1.1.A Campaña de desparasitación del ganado ovino y llamas (ETAPA II)" },
+      { v: "2.1.2", t: "2.1.2 Campaña de desparasitación del ganado vacuno" },
+      { v: "2.1.2.A", t: "2.1.2.A Campaña de desparasitación del ganado vacuno (ETAPA II)" },
+      { v: "2.1.3", t: "2.1.3 Equipamiento para campaña de sanidad" },
+      { v: "2.1.5", t: "2.1.5 Análisis coproparasitológico antes y después de la campaña" },
+      { v: "2.2.1", t: "2.2.1 Capacitación ECA en Manejo de registros de producción" },
+      { v: "2.2.2", t: "2.2.2 Capacitación en asignación de pasturas: medición de cantidad de forraje por dia al ganado" },
+      { v: "2.2.3", t: "2.2.3 Capacitación ECAS en dotación de agua y minerales al ganado" },
+      { v: "2.3.1", t: "2.3.1 Capacitacion ECA en reproduccion animal (salud reproductiva, deteccion de celo y sincronizacion de celo)" },
+      { v: "2.3.2", t: "2.3.2 Apoyo con el servicio inseminacion artificial de vacunos" },
+      { v: "2.3.3", t: "2.3.3 Apoyo con el servicio inseminacion artificial de ovinos" },
+      { v: "2.3.3.A", t: "2.3.3.A Apoyo con el servicio inseminacion artificial de ovinos" },
+      { v: "2.3.4", t: "2.3.4 Adquisicion de reproductores ovinos (incluye alimentacion mi medicamentos)" },
+      { v: "3.1.1", t: "3.1.1 Capacitación ECA en sanidad de cuy" },
+      { v: "3.1.2", t: "3.1.2 Capacitación ECA en alimentación de cuy" },
+      { v: "3.1.3", t: "3.1.3 Capacitación ECA en manejo adecuado de cuy" },
+      { v: "3.1.4", t: "3.1.4 Asistencia técnica en manejo de cuy y otros (1. Tec.)" },
+      { v: "3.1.5", t: "3.1.5 Implementación de módulos de enseñanza" },
+      { v: "3.2.1", t: "3.2.1 Siembra de alevines en 08 comunidades de AISD" },
+      { v: "4.1.1", t: "4.1.1 Taller de capacitación en organización y articulación de redes asociativas" },
+      { v: "4.2.1", t: "4.2.1 Participación de los productores en actividades de fortalecimiento de confianza entre los integrantes de la red" },
+      { v: "4.2.2", t: "4.2.2 Elaboración y reproducción del plan operativo y el reglamento interno de la Red." },
+      { v: "4.3.2", t: "4.3.2 Organización de tabladas ganaderas" }
+    ],
+    "DESARROLLO AGROPECUARIO AGRICULTURA FAMILIAR PROGRESO COYLLURQUI": [
+      { v: "5.1.1", t: "5.1.1 Talleres de capacitación en manejo agronomico de cultivos de papa, maca, ajo y avena forrajera" },
+      { v: "5.2.1", t: "5.2.1 Asistencia tecnica" },
+      { v: "5.3.1", t: "5.3.1 Implementación de Agroquimicos" },
+      { v: "5.3.2", t: "5.3.2 Implementación con abonos foliares" },
+      { v: "5.3.3", t: "5.3.3 Implementación con maquina agricola - Progreso Coyllurqui" },
+      { v: "5.3.4", t: "5.3.4 Implementación de abono orgánico" },
+      { v: "5.3.5", t: "5.3.5 Implementación de Agroquimicos II" },
+      { v: "5.3.6", t: "5.3.6 Implementación con abonos foliares II" },
+      { v: "5.4.1", t: "5.4.1 Implementación de Agroquimicos" },
+      { v: "5.4.2", t: "5.4.2 Implementación de semillas - holantao" },
+      { v: "5.4.3", t: "5.4.3 Implementación con Abonos Foliares-Cultivo de holantao" },
+      { v: "5.5.1", t: "5.5.1 Instalacion de semillas-ajo" },
+      { v: "5.5.2", t: "5.5.2 Implementación con agroquimicos-cultivo de ajo" },
+      { v: "5.6.1", t: "5.6.1 Instalacion de avena forrajera" },
+      { v: "5.6.2", t: "5.6.2 Campaña de desparasitación del ganado vacuno y ovino" }
+    ],
+    "DESARROLLO AGROPECUARIO HUANCUIRE": [
+      { v: "1.1.1", t: "1.1.1 Taller de capacitacion en Instalacion, manejo y cosecha de pasturas forrajera adaptadas a zonas altoandinas ECA" },
+      { v: "1.1.2", t: "1.1.2 Taller de capacitacion ECA instalación de pequeños sistemas de riego por aspersion" },
+      { v: "1.2.1", t: "1.2.1 Asistencia tecnica en instalacion de avena forrajera" },
+      { v: "1.2.1.A", t: "1.2.1.A Asistencia tecnica en instalacion de avena forrajera" },
+      { v: "1.2.2", t: "1.2.2 Asistencia tecnica en instalacion de pequeños sistemas de riego" },
+      { v: "1.2.3", t: "1.2.3 Direccion de proyecto" },
+      { v: "1.2.4", t: "1.2.4 Pacas de Heno (NC 029 AGROPECUARIO)" },
+      { v: "2.1.1", t: "2.1.1 Dotacion de semillas de pastos forrajeros perennes para instalar 35 hectareas" },
+      { v: "3.1.1", t: "3.1.1 Taller de capacitacion en siembra, manejo de cultivos, cosecha y post cosecha de pastos ECA" },
+      { v: "3.2.1", t: "3.2.1 Asistencia tecnica en siembra, manejo de cultivos, cosecha y post cosecha de pastos" },
+      { v: "3.2.1.A", t: "3.2.1.A Preparacion de suelo para el cultivo de pastos perennes y asistencia" },
+      { v: "3.2.1.B", t: "3.2.1.B Tapado mecanico de semilla" },
+      { v: "3.2.2", t: "3.2.2 Implementacion con materiales y herramientas de enseñanza" },
+      { v: "3.2.2.A", t: "3.2.2.A Materiales y herramientas de enseñanza" },
+      { v: "4.1.1", t: "4.1.1 Adquisicion de materiales de construccion para cerco" },
+      { v: "4.2.1", t: "4.2.1 Asistencia tecnica para la instalacion de cercos alambrados" },
+      { v: "5.1.1", t: "5.1.1 Asistencia tecnica en manejo y selección de ganado criollo" },
+      { v: "5.1.2", t: "5.1.2 Implementacion con equipos, materiales y herraminetas de enseñanza" },
+      { v: "6.1.1", t: "6.1.1 Capacitacion ECAS en manejo y seleccion de ganado criollo" },
+      { v: "6.1.2", t: "6.1.2 Asistencia tecnica en manejo y seleccion de ganado criollo" },
+      { v: "6.1.3", t: "6.1.3 Implementacion con equipos, materiales y herraminetas de enseñanza" },
+      { v: "7.1.1", t: "7.1.1 Examen Coproparasitologico antes y despues de la campaña de desparasitacion" },
+      { v: "7.1.2", t: "7.1.2 Realizacion de pruebas de eficacia de antiparasitarios" },
+      { v: "7.1.3", t: "7.1.3 Elaboracion calendario de manejo ganadero" },
+      { v: "7.1.4", t: "7.1.4 Adquisicion de insumos y herraminetas para el desarrollo de la campaña de sanidad animal" },
+      { v: "7.1.4.A", t: "7.1.4.A Herramientas y materiales complementarios para el desarrollo de la campaña de sanidad animal" },
+      { v: "7.1.4.B", t: "7.1.4.B Insumos y herramientas para el desarrollo de la campaña de sanidad animal 2026" },
+      { v: "7.1.5", t: "7.1.5 Asistencia tecnica en la campaña de sanidad animal (Dosificacion)" },
+      { v: "8.1.1", t: "8.1.1 Implementacion de botiquin veterinario" },
+      { v: "9.1.1", t: "9.1.1 Programa de formacion de promotores en sanidad animal" },
+      { v: "10.1.1", t: "10.1.1 Capacitacion en crianza y manejo de ganado ovino ECA" },
+      { v: "10.1.2", t: "10.1.2 Capacitacion en transformacion de carne de ovino ECA" },
+      { v: "10.1.3", t: "10.1.3 Capacitacion en comercializacion de sub productos de carne de ovino ECA" },
+      { v: "10.1.4", t: "10.1.4 Asistencia técnica en comercialización y transformación de la carne de ovino." },
+      { v: "10.1.5", t: "10.1.5 Implementacion con modulos de enseñanza" },
+      { v: "11.1.1", t: "11.1.1 Asistencia tecnica en lectura de resultado del estudio" },
+      { v: "11.1.2", t: "11.1.2 Asistencia en produccion de papa nativa" },
+      { v: "11.1.3", t: "11.1.3 Implementacion con modulos de enseñanza produccion papa nativa (NC 029 AGROPECUARIO)" },
+      { v: "11.1.3 A", t: "11.1.3 A Implementacion con modulos de enseñanza produccion papa nativa" },
+      { v: "11.1.3 B", t: "11.1.3 B Implementacion con modulos de enseñanza produccion papa nativa" },
+      { v: "12.1.1", t: "12.1.1 Desarrollo de feria agropecuaria artesanal y gastronomica" },
+      { v: "13.1.1", t: "13.1.1 Desarrollo de concurso de siembra, cosecha, manejo de suelos y agua." }
+    ],
+    "FORESTACION": [
+      { v: "1.1.1", t: "1.1.1 Talleres de capacitacion eca, en produccion en temas de forestacion: produccion de plantones y plantacion forestal" },
+      { v: "1.2.1", t: "1.2.1 Mantenimiento y refaccion para la infraestructura de viveros" },
+      { v: "1.3.1", t: "1.3.1 Repique de plantulas de qolle" },
+      { v: "1.4.1", t: "1.4.1 Proteccion de areas a forestar en comunidades" },
+      { v: "1.4.2", t: "1.4.2 Plantacion propiamente dicha (pino, queñua y qolle)" },
+      { v: "1.4.3", t: "1.4.3 Apertura de hoyos para la instalación de plantones (herramientas manuales)" },
+      { v: "2.1.1", t: "2.1.1 Recalce de areas de plantacion" },
+      { v: "2.1.2", t: "2.1.2 Control fitosanitario en plantaciones" },
+      { v: "2.1.3", t: "2.1.3 Poda y raleo de plantaciones forestales" },
+      { v: "2.1.4", t: "2.1.4 Construccion de pequeños reservorios de agua para riego en epocas secas" },
+      { v: "2.1.5", t: "2.1.5 Capacitacion en manejo de incendios forestales" },
+      { v: "2.2.1", t: "2.2.1 Talleres de capacitacion eca en produccion, cosecha, procesamiento y comercializaion de hongos" },
+      { v: "2.2.2", t: "2.2.2 Implementacion de secadoras de hongos" },
+      { v: "2.2.3", t: "2.2.3 Kits para procesamiento de hongos" },
+      { v: "2.2.4", t: "2.2.4 Visita Técnica Comercial" },
+      { v: "3.1.1", t: "3.1.1 Accesorios (guantes)" },
+      { v: "3.1.2", t: "3.1.2 Generacion de empleo temporal mano de obra no calificada" },
+      { v: "3.2.1", t: "3.2.1 Equipo tecnico de proyecto" },
+      { v: "3.2.2", t: "3.2.2 Accesorios (guantes)" },
+      { v: "3.2.3", t: "3.2.3 Apoyo economico mano de obra calificada" },
+      { v: "4.1.1", t: "4.1.1 Feria challhuahuacho" }
+    ],
+    "FORTALECIMIENTO PRODUCTIVO AGROPECUARIO PARA 16 COMUNIDADES": [
+      { v: "1.00", t: "1.00 Alevines de trucha (70,000 und) - CC Cuchuhuacho" },
+      { v: "2.00", t: "2.00 Alimento balanceado para trucha, 113 sacos x 25kg (Nicovita) - CC Cuchuhuacho" },
+      { v: "3.00", t: "3.00 Secadores de hongos de estructura desarmable y materiales 10 CC (Choccoyo, Chontahuillque, Patario, Huaroccoyo, Tambulla, Pararani, Anta Anta, Lahuani, Minascucho, Patabamba)" },
+      { v: "4.00", t: "4.00 Equipos y herramientas para artesania en madera de pino - CC Choccoyo y Patario" },
+      { v: "5.00", t: "5.00 Gallinas de postura Hy-Line Brown en recria (Chontahuillque, Huaroccoyo, Tambulla, Pararani, Anta Anta, Lahuani, Llamahuire, Minascucho, Patabamba, Sacsahuillca)" },
+      { v: "6.00", t: "6.00 Antibiotico veterinario - 10 CC (Chontahuillque, Huaroccoyo, Tambulla, Pararani, Anta Anta, Lahuani, Llamahuire, Minascucho, Patabamba, Sacsahuillca)" },
+      { v: "7.00", t: "7.00 Cuyes reproductores raza Peru (690 hembras + 120 machos) - CC Ccasa" },
+      { v: "8.00", t: "8.00 Semilla certificada de papa variedad Peruanita - CC Huancuire" },
+      { v: "9.00", t: "9.00 Carreta agricola multipropósito, capacidad 4 toneladas - CC Huanacopampa" }
+    ]
+  };
+  // Alias de respaldo por si en algún registro figura el nombre corto
+  dependenciasPartidas["AGRICULTURA FAMILIAR PROGRESO COYLLURQUI"] = dependenciasPartidas["DESARROLLO AGROPECUARIO AGRICULTURA FAMILIAR PROGRESO COYLLURQUI"];
+
+  // Función auxiliar para normalizar textos (sin tildes, comas ni espacios extra)
+  function normalizarTexto(str) {
     if (!str) return "";
     return str
       .toString()
@@ -441,6 +637,39 @@
       .replace(/[,.-]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  // Buscador global instantáneo para cualquier tabla de la vista
+  function filtrarTablaVista(tbodyId, textoBusqueda, badgeContadorId = null) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    const termino = normalizarTexto(textoBusqueda);
+    const filas = tbody.querySelectorAll('tr');
+    let visibles = 0;
+
+    filas.forEach(tr => {
+      // No ocultar la fila de TOTAL GENERAL en el resumen si existe
+      if (tr.classList.contains('fila-total-fija')) return;
+      // Si es fila de mensaje vacío ("Esperando filtros...", etc.)
+      if (tr.cells.length === 1 && tr.cells[0].colSpan > 1) return;
+
+      const contenidoFila = normalizarTexto(tr.innerText);
+      if (termino === "" || contenidoFila.includes(termino)) {
+        tr.style.display = "";
+        visibles++;
+      } else {
+        tr.style.display = "none";
+      }
+    });
+
+    if (badgeContadorId) {
+      const badge = document.getElementById(badgeContadorId);
+      if (badge) {
+        badge.innerText = termino === "" 
+          ? `Total registros: ${datosCeproderGlobal.length}` 
+          : `Mostrando: ${visibles} de ${datosCeproderGlobal.length} registros`;
+      }
+    }
   }
 
   // ==================== INICIALIZACIÓN ====================
@@ -497,19 +726,19 @@
 
     return filtrados.map(f => {
       let icon = 'bi-file-earmark';
-      if (categoria === 'pdf') icon = 'bi-file-earmark-pdf text-danger';
-      else if (categoria === 'excel') icon = 'bi-file-earmark-excel text-success';
-      else if (categoria === 'imagen') icon = 'bi-image text-info';
+      if (categoria === 'pdf') icon = 'bi-file-earmark-pdf-fill text-danger';
+      else if (categoria === 'excel') icon = 'bi-file-earmark-excel-fill text-success';
+      else if (categoria === 'imagen') icon = 'bi-image-fill text-primary';
 
       let botonAccion = '';
       if (categoria === 'excel') {
-        botonAccion = `<a href="${f.archivo_url}" download class="text-white text-decoration-none" title="Descargar Excel"><i class="bi bi-download"></i></a>`;
+        botonAccion = `<a href="${f.archivo_url}" download class="text-primary text-decoration-none" title="Descargar Excel"><i class="bi bi-download"></i></a>`;
       } else {
-        botonAccion = `<a href="#" onclick='verArchivo(${JSON.stringify(f)})' class="text-white text-decoration-none" title="Visualizar"><i class="bi bi-eye"></i></a>`;
+        botonAccion = `<a href="#" onclick='verArchivo(${JSON.stringify(f)})' class="text-primary text-decoration-none" title="Visualizar"><i class="bi bi-eye-fill"></i></a>`;
       }
 
       let btnEliminar = puedeBorrar 
-        ? `<span class="text-danger ms-1" style="cursor:pointer;" onclick="eliminarArchivo(${f.id})" title="Eliminar archivo"><i class="bi bi-x-circle"></i></span>` 
+        ? `<span class="text-danger ms-1" style="cursor:pointer;" onclick="eliminarArchivo(${f.id})" title="Eliminar archivo"><i class="bi bi-x-circle-fill"></i></span>` 
         : '';
 
       return `
@@ -537,16 +766,16 @@
     tbody.innerHTML = data.map(d => {
       const tieneArchivos = d.archivos && d.archivos.length > 0;
       const btnZip = tieneArchivos
-        ? `<a href="/api/documentos/${d.id}/zip" class="btn btn-sm btn-info text-dark fw-bold" title="Descargar todo en ZIP"><i class="bi bi-file-earmark-zip-fill"></i></a>`
+        ? `<a href="/api/documentos/${d.id}/zip" class="btn btn-sm btn-primary fw-bold" title="Descargar todo en ZIP"><i class="bi bi-file-earmark-zip-fill"></i></a>`
         : `<button class="btn btn-sm btn-outline-secondary" disabled title="Sin archivos para comprimir"><i class="bi bi-file-earmark-zip"></i></button>`;
 
       return `
         <tr>
-          <td><span class="badge bg-secondary">${d.valorizacion}</span></td>
+          <td><span class="badge bg-dark">${d.valorizacion}</span></td>
           <td>
             <span class="badge-codigo mb-1">${d.partida_codigo}</span>
-            <div class="fw-semibold">${d.partida_descripcion}</div>
-            <small class="text-secondary">${d.proyecto}</small>
+            <div class="fw-bold text-dark">${d.partida_descripcion}</div>
+            <small class="text-secondary fw-semibold">${d.proyecto}</small>
           </td>
           <td class="col-archivos">${renderPorCategoria(d.archivos, 'pdf', false)}</td>
           <td class="col-archivos">${renderPorCategoria(d.archivos, 'excel', false)}</td>
@@ -559,18 +788,23 @@
 
   function renderGestion(data) {
     const tbody = document.getElementById('tabla-gestion');
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-secondary">No hay registros.</td></tr>';
+      return;
+    }
+
     tbody.innerHTML = data.map(d => {
       const tieneArchivos = d.archivos && d.archivos.length > 0;
       const btnZip = tieneArchivos
-        ? `<a href="/api/documentos/${d.id}/zip" class="btn btn-sm btn-info text-dark me-1" title="Descargar todos los archivos en ZIP"><i class="bi bi-file-earmark-zip-fill"></i></a>`
+        ? `<a href="/api/documentos/${d.id}/zip" class="btn btn-sm btn-primary me-1" title="Descargar todos los archivos en ZIP"><i class="bi bi-file-earmark-zip-fill"></i></a>`
         : `<button class="btn btn-sm btn-outline-secondary me-1" disabled title="Sin archivos adjuntos"><i class="bi bi-file-earmark-zip"></i></button>`;
 
       return `
         <tr>
           <td>
             <span class="badge-codigo mb-1">${d.partida_codigo}</span>
-            <div class="fw-semibold">${d.partida_descripcion}</div>
-            <small class="text-secondary">${d.valorizacion} (${d.anio})</small>
+            <div class="fw-bold text-dark">${d.partida_descripcion}</div>
+            <small class="text-secondary fw-semibold">${d.valorizacion} (${d.anio}) - ${d.proyecto}</small>
           </td>
           <td class="col-archivos">${renderPorCategoria(d.archivos, 'pdf', true)}</td>
           <td class="col-archivos">${renderPorCategoria(d.archivos, 'excel', true)}</td>
@@ -708,59 +942,63 @@
   }
 
   // ==================== LÓGICA PESTAÑA 3 (CEPRODER) ====================
-  const dependenciasPartidas = {
-    "AGRICULTURA FAMILIAR": [
-      {v: "1.1.1", t: "1.1.1 Presentacion de Eca y prueba de caja inicial"},
-      {v: "1.1.2", t: "1.1.2 Capacitacion ECAS en practicas Agronomicas"},
-      {v: "1.2.1", t: "1.2.1 Implementacion con maquina agricola"}
-    ],
-    "CADENA PRODUCTIVA": [
-      {v: "1.1.1", t: "1.1.1 Capacitación ECAS en buenas prácticas"},
-      {v: "2.3.1", t: "2.3.1 Capacitacion ECA en reproduccion animal"}
-    ]
-  };
-
   function actualizarPartidas() {
     const proyecto = document.getElementById('proyectoFiltro').value;
     const contenedor = document.getElementById('listaPartidas');
     const btn = document.getElementById('btnPartidas');
-    
-    contenedor.innerHTML = `
-      <li class="mb-2 border-bottom border-secondary pb-1">
+    btn.innerText = "Seleccionar...";
+
+    if (!proyecto || !dependenciasPartidas[proyecto]) {
+      contenedor.innerHTML = `<li class="text-muted small p-2">Seleccione un proyecto primero</li>`;
+      return;
+    }
+
+    let html = `
+      <li class="mb-2 pb-2 border-bottom border-secondary sticky-top bg-dark pt-1">
+        <input type="text" class="form-control form-control-sm mb-2" placeholder="Filtrar partida..." onkeyup="filtrarOpcionesPartida(this.value)">
         <div class="form-check">
           <input class="form-check-input" type="checkbox" id="selectAllPartidas" onchange="toggleAll(this)">
-          <label class="form-check-label fw-bold text-primary small" for="selectAllPartidas">MARCAR TODOS</label>
+          <label class="form-check-label fw-bold text-info small" for="selectAllPartidas">MARCAR / DESMARCAR TODOS (${dependenciasPartidas[proyecto].length})</label>
         </div>
       </li>
     `;
-    btn.innerText = "Seleccionar...";
-    
-    if (proyecto && dependenciasPartidas[proyecto]) {
-      dependenciasPartidas[proyecto].forEach(p => {
-        contenedor.innerHTML += `
-          <li>
-            <div class="form-check">
-              <input class="form-check-input check-partida" type="checkbox" value="${p.v}" onchange="actualizarEtiqueta()">
-              <label class="form-check-label small text-light">${p.t}</label>
-            </div>
-          </li>`;
-      });
-    } else {
-      contenedor.innerHTML += `<li class="text-muted small p-2">Seleccione un proyecto primero</li>`;
-    }
+
+    dependenciasPartidas[proyecto].forEach((p, idx) => {
+      const checkId = `chk_part_${idx}`;
+      html += `
+        <li class="item-partida-dropdown py-1 border-bottom border-secondary border-opacity-25">
+          <div class="form-check">
+            <input class="form-check-input check-partida" type="checkbox" value="${p.v}" id="${checkId}" onchange="actualizarEtiqueta()">
+            <label class="form-check-label small text-light partida-item-label" for="${checkId}">${p.t}</label>
+          </div>
+        </li>`;
+    });
+
+    contenedor.innerHTML = html;
+  }
+
+  function filtrarOpcionesPartida(texto) {
+    const filtro = normalizarTexto(texto);
+    document.querySelectorAll('#listaPartidas .item-partida-dropdown').forEach(li => {
+      const txt = normalizarTexto(li.innerText);
+      li.style.display = (filtro === "" || txt.includes(filtro)) ? "" : "none";
+    });
   }
 
   function actualizarEtiqueta() {
-    let seleccionadas = document.querySelectorAll('.check-partida:checked');
+    const seleccionadas = document.querySelectorAll('.check-partida:checked');
     document.getElementById('btnPartidas').innerText = seleccionadas.length > 0 
       ? seleccionadas.length + " seleccionadas" 
       : "Seleccionar...";
   }
 
   function toggleAll(source) {
-    const checkboxes = document.querySelectorAll('#listaPartidas input[type="checkbox"]');
-    checkboxes.forEach(checkbox => {
-      if(checkbox.id !== 'selectAllPartidas') checkbox.checked = source.checked;
+    const items = document.querySelectorAll('#listaPartidas .item-partida-dropdown');
+    items.forEach(li => {
+      if (li.style.display !== 'none') {
+        const cb = li.querySelector('.check-partida');
+        if (cb) cb.checked = source.checked;
+      }
     });
     actualizarEtiqueta();
   }
@@ -777,6 +1015,10 @@
       partidasSeleccionadas.push(cb.value);
     });
 
+    // Limpiar buscadores locales de tabla al hacer nueva consulta
+    if (document.getElementById('buscadorResumen')) document.getElementById('buscadorResumen').value = '';
+    if (document.getElementById('buscadorRegistros')) document.getElementById('buscadorRegistros').value = '';
+
     const params = new URLSearchParams({
       proyecto: document.getElementById('proyectoFiltro').value,
       fInicio: document.getElementById('fInicio').value,
@@ -792,7 +1034,7 @@
     });
 
     try {
-      document.getElementById('tablaResultados').innerHTML = '<tr><td colspan="32" class="text-center p-4"><div class="spinner-border text-primary" role="status"></div> Cargando datos...</td></tr>';
+      document.getElementById('tablaResultados').innerHTML = '<tr><td colspan="32" class="text-center p-4 text-dark"><div class="spinner-border text-primary" role="status"></div> Cargando datos...</td></tr>';
       
       const res = await fetch('/api/ceproder?' + params.toString());
       
@@ -820,30 +1062,49 @@
   function renderTablaCeproder(data) {
     const tbody = document.getElementById('tablaResultados');
     if (data.length === 0) {
-      tbody.innerHTML = "<tr><td colspan='32' class='text-muted p-4'>No se encontraron registros con esos filtros.</td></tr>";
+      tbody.innerHTML = "<tr><td colspan='32' class='text-secondary p-4'>No se encontraron registros con esos filtros.</td></tr>";
       return;
     }
 
     let html = "";
     data.forEach((r, idx) => {
       let btnVer = r.documento_adjunto 
-        ? `<a href="${r.documento_adjunto}" target="_blank" class="btn btn-info btn-sm fw-bold text-white">VER</a>` 
-        : `<button class="btn btn-secondary btn-sm fw-bold" disabled>VER</button>`;
+        ? `<a href="${r.documento_adjunto}" target="_blank" class="btn btn-primary btn-sm fw-bold">VER</a>` 
+        : `<button class="btn btn-outline-secondary btn-sm" disabled>VER</button>`;
 
       html += `<tr>
-        <td>${r.nro_registro || (idx + 1)}</td><td>${r.nombres_apellidos || ''}</td><td>${r.dni || ''}</td>
-        <td>${r.edad || ''}</td><td>${r.genero || ''}</td><td>${r.comunidad || ''}</td>
-        <td>${r.sector || ''}</td><td>${r.cargo || ''}</td><td>${r.material || ''}</td>
-        <td>${r.cantidad || ''}</td><td>${r.cultivo || ''}</td><td>${r.especialista || ''}</td>
+        <td class="fw-bold">${r.nro_registro || (idx + 1)}</td>
+        <td class="text-start fw-semibold">${r.nombres_apellidos || ''}</td>
+        <td>${r.dni || ''}</td>
+        <td>${r.edad || ''}</td>
+        <td>${r.genero || ''}</td>
+        <td class="fw-semibold text-primary">${r.comunidad || ''}</td>
+        <td>${r.sector || ''}</td>
+        <td>${r.cargo || ''}</td>
+        <td>${r.material || ''}</td>
+        <td>${r.cantidad || ''}</td>
+        <td>${r.cultivo || ''}</td>
+        <td>${r.especialista || ''}</td>
         <td>${r.fecha ? new Date(r.fecha).toLocaleDateString('es-ES', {timeZone: 'UTC'}) : ''}</td>
-        <td>${r.actividad || ''}</td><td>${r.hect || ''}</td>
-        <td>${r.ovino_adulto || ''}</td><td>${r.ovino_borrego || ''}</td><td>${r.ovino_cordero || ''}</td>
-        <td>${r.vacuno_adulto || ''}</td><td>${r.vacuno_baquilla || ''}</td><td>${r.vacuno_becerro || ''}</td>
-        <td>${r.camelido_adulto || ''}</td><td>${r.camelido_baquilla || ''}</td><td>${r.camelido_cria || ''}</td>
-        <td>${r.proyecto || ''}</td><td>${r.adenda || ''}</td>
-        <td class="bg-purple">${r.valorizacion || ''}</td><td class="bg-purple">${r.cod_partida || ''}</td>
-        <td class="bg-primary text-white">${btnVer}</td>
-        <td>${r.departamento || ''}</td><td>${r.provincia || ''}</td><td>${r.distrito || ''}</td>
+        <td class="text-start">${r.actividad || ''}</td>
+        <td>${r.hect || ''}</td>
+        <td>${r.ovino_adulto || ''}</td>
+        <td>${r.ovino_borrego || ''}</td>
+        <td>${r.ovino_cordero || ''}</td>
+        <td>${r.vacuno_adulto || ''}</td>
+        <td>${r.vacuno_baquilla || ''}</td>
+        <td>${r.vacuno_becerro || ''}</td>
+        <td>${r.camelido_adulto || ''}</td>
+        <td>${r.camelido_baquilla || ''}</td>
+        <td>${r.camelido_cria || ''}</td>
+        <td>${r.proyecto || ''}</td>
+        <td>${r.adenda || ''}</td>
+        <td class="bg-purple-cell">${r.valorizacion || ''}</td>
+        <td class="bg-purple-cell">${r.cod_partida || ''}</td>
+        <td class="bg-adjunto-cell">${btnVer}</td>
+        <td>${r.departamento || ''}</td>
+        <td>${r.provincia || ''}</td>
+        <td>${r.distrito || ''}</td>
       </tr>`;
     });
     tbody.innerHTML = html;
@@ -854,16 +1115,14 @@
     let htmlResumen = "";
     let totalContabilizado = 0;
 
-    // Crear mapa de conteo inicializado en 0 para las 47 comunidades oficiales
     const mapaConteo = new Map();
     const mapaClaveOficial = new Map();
 
     comunidadesCeproder.forEach(com => {
       mapaConteo.set(com, 0);
-      mapaClaveOficial.set(normalizarTextoComunidad(com), com);
+      mapaClaveOficial.set(normalizarTexto(com), com);
     });
 
-    // Aliases conocidos en BD para empatar con el listado oficial del Excel
     const aliasComunidades = {
       "PALCCA": "PALCCA PICOSAYHUAS",
       "QUIHUINCHA": "QUEHUINCHA",
@@ -873,9 +1132,8 @@
 
     let sinCoincidencia = 0;
 
-    // Contar cada registro de data exactamente una vez
     data.forEach(r => {
-      const claveReg = normalizarTextoComunidad(r.comunidad);
+      const claveReg = normalizarTexto(r.comunidad);
       let comOficial = mapaClaveOficial.get(claveReg);
 
       if (!comOficial && aliasComunidades[claveReg]) {
@@ -889,32 +1147,29 @@
       }
     });
 
-    // Renderizar SIEMPRE las 47 comunidades (incluso si tienen 0)
     comunidadesCeproder.forEach((com, index) => {
       const cantidad = mapaConteo.get(com) || 0;
       totalContabilizado += cantidad;
-      const claseCantidad = cantidad > 0 ? "fw-bold fs-6 text-info" : "text-secondary";
+      const claseCantidad = cantidad > 0 ? "fw-bold fs-6 text-primary" : "text-muted";
       htmlResumen += `<tr>
-        <td>${index + 1}</td>
-        <td class="text-start">${com}</td>
+        <td class="fw-semibold">${index + 1}</td>
+        <td class="text-start fw-semibold">${com}</td>
         <td class="${claseCantidad}">${cantidad}</td>
       </tr>`;
     });
 
-    // Si en la BD existen registros sin comunidad o con un nombre fuera de las 47, se muestran para que el total cuadre siempre al 100%
     if (sinCoincidencia > 0) {
       totalContabilizado += sinCoincidencia;
-      htmlResumen += `<tr class="table-warning text-dark">
-        <td>${comunidadesCeproder.length + 1}</td>
+      htmlResumen += `<tr class="table-warning">
+        <td class="fw-bold">${comunidadesCeproder.length + 1}</td>
         <td class="text-start fw-bold">SIN ESPECIFICAR / OTRAS COMUNIDADES EN BD</td>
-        <td class="fw-bold fs-6">${sinCoincidencia}</td>
+        <td class="fw-bold fs-6 text-danger">${sinCoincidencia}</td>
       </tr>`;
     }
 
-    // Fila de Total General
-    htmlResumen += `<tr class="table-primary text-white fw-bold">
-      <td colspan="2" class="text-end">TOTAL DE BENEFICIARIOS / REGISTROS:</td>
-      <td class="fs-6">${totalContabilizado}</td>
+    htmlResumen += `<tr class="table-primary fw-bold fila-total-fija">
+      <td colspan="2" class="text-end text-dark">TOTAL DE BENEFICIARIOS / REGISTROS:</td>
+      <td class="fs-6 text-primary">${totalContabilizado}</td>
     </tr>`;
 
     tbody.innerHTML = htmlResumen;
@@ -932,7 +1187,7 @@
 
     let html = cloneTable.outerHTML;
     let meta = '<meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">';
-    let estilo = '<style>th { background-color: #2563eb; color: white; } td, th { border: 1px solid #ccc; padding: 5px; }</style>';
+    let estilo = '<style>th { background-color: #1d4ed8; color: white; } td, th { border: 1px solid #cbd5e1; padding: 5px; }</style>';
     
     let blob = new Blob([meta + estilo + html], { type: "application/vnd.ms-excel" });
     let url = URL.createObjectURL(blob);
