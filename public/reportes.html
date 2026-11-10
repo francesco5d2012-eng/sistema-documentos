@@ -20,13 +20,21 @@
     .file-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; font-weight: 500; color: #0f172a; }
     .col-archivos { width: 18%; vertical-align: top; }
     
-    /* Diseño de Tablas Claras y Modernas */
+    /* Diseño de Tablas Claras con Bordes de Celdas Visibles y Ordenamiento */
     .table-container { max-height: 500px; overflow: auto; background: #ffffff; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
-    .table-clara { --bs-table-bg: #ffffff; --bs-table-color: #1e293b; --bs-table-striped-bg: #f8fafc; --bs-table-striped-color: #1e293b; --bs-table-hover-bg: #eff6ff; --bs-table-hover-color: #0f172a; border-color: #e2e8f0; color: #1e293b !important; margin-bottom: 0; }
-    .table-clara thead th { background-color: #1d4ed8 !important; color: #ffffff !important; position: sticky; top: 0; z-index: 2; white-space: nowrap; font-weight: 600; border-bottom: 2px solid #1e40af; padding: 10px 8px; font-size: 0.82rem; letter-spacing: 0.3px; }
-    .table-clara tbody td { color: #1e293b; border-color: #e2e8f0; padding: 7px 8px; font-size: 0.85rem; vertical-align: middle; }
+    .table-clara { --bs-table-bg: #ffffff; --bs-table-color: #1e293b; --bs-table-striped-bg: #f8fafc; --bs-table-striped-color: #1e293b; --bs-table-hover-bg: #eff6ff; --bs-table-hover-color: #0f172a; border-collapse: collapse; width: 100%; color: #1e293b !important; margin-bottom: 0; }
+    .table-clara thead th { background-color: #1d4ed8 !important; color: #ffffff !important; position: sticky; top: 0; z-index: 2; white-space: nowrap; font-weight: 600; border: 1px solid #3b82f6 !important; border-bottom: 2px solid #1e3a8a !important; padding: 10px 10px; font-size: 0.82rem; letter-spacing: 0.3px; user-select: none; }
+    .table-clara tbody td { color: #1e293b; border: 1px solid #cbd5e1 !important; padding: 8px 10px; font-size: 0.85rem; vertical-align: middle; }
     
-    .bg-purple-header { background-color: #5b21b6 !important; color: #ffffff !important; }
+    /* Estilo para cabeceras ordenables */
+    .th-sortable { cursor: pointer; transition: background-color 0.15s ease; }
+    .th-sortable:hover { background-color: #1e40af !important; }
+    .th-content { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; }
+    .sort-icon { font-size: 0.8rem; opacity: 0.75; display: inline-flex; align-items: center; }
+    .th-sortable.asc .sort-icon, .th-sortable.desc .sort-icon { opacity: 1; color: #fde047; }
+
+    .bg-purple-header { background-color: #5b21b6 !important; border-color: #7c3aed !important; color: #ffffff !important; }
+    .bg-purple-header.th-sortable:hover { background-color: #4c1d95 !important; }
     .bg-purple-cell { background-color: #f3e8ff !important; color: #5b21b6 !important; font-weight: 700; }
     
     /* Buscador encima de cada tabla */
@@ -127,11 +135,11 @@
           </div>
         </div>
         <div class="table-container">
-          <table class="table table-clara table-striped table-hover align-middle">
+          <table id="tablaVistaReportes" class="table table-clara table-bordered table-striped table-hover align-middle">
             <thead>
               <tr>
-                <th style="width: 10%;">Valorización</th>
-                <th style="width: 30%;">Código / Partida</th>
+                <th style="width: 12%;">Valorización</th>
+                <th style="width: 28%;">Código / Partida</th>
                 <th class="col-archivos"><i class="bi bi-file-earmark-pdf text-warning me-1"></i>PDFs</th>
                 <th class="col-archivos"><i class="bi bi-file-earmark-excel text-info me-1"></i>Exceles</th>
                 <th class="col-archivos"><i class="bi bi-images text-light me-1"></i>Fotografías</th>
@@ -159,7 +167,7 @@
           </div>
         </div>
         <div class="table-container">
-          <table class="table table-clara table-striped table-hover align-middle">
+          <table id="tablaVistaGestion" class="table table-clara table-bordered table-striped table-hover align-middle">
             <thead>
               <tr>
                 <th style="width: 34%;">Código / Partida</th>
@@ -278,12 +286,12 @@
           </div>
         </div>
         <div class="table-container" style="max-height: 290px;">
-          <table id="tablaResumenComunidades" class="table table-clara table-striped table-hover table-sm text-center">
+          <table id="tablaResumenComunidades" class="table table-clara table-bordered table-striped table-hover table-sm text-center">
             <thead>
               <tr>
-                <th style="width: 60px;">N°</th>
+                <th style="width: 70px;">N°</th>
                 <th class="text-start">Comunidad</th>
-                <th style="width: 220px;">Cantidad de Beneficiarios</th>
+                <th style="width: 240px;">Cantidad de Beneficiarios</th>
               </tr>
             </thead>
             <tbody id="tablaResumen">
@@ -310,7 +318,7 @@
           </div>
         </div>
         <div class="table-container">
-          <table id="tablaCeproder" class="table table-clara table-striped table-hover table-sm text-center">
+          <table id="tablaCeproder" class="table table-clara table-bordered table-striped table-hover table-sm text-center">
             <thead>
               <tr>
                 <th>N°</th><th>NOMBRES Y APELLIDOS</th><th>DNI</th><th>EDAD</th><th>GÉNERO</th>
@@ -356,23 +364,26 @@
             </div>
             <div class="col-md-5">
               <label class="form-label small text-secondary">Valorización</label>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 01" required>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 02" required>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 03" required>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 04" required>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 05" required>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 06" required>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 07" required>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 08" required>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 09" required>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 10" required>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 11" required>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 12" required>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 13" required>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 14" required>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 15" required>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 16" required>
-              <input type="text" id="doc-valorizacion" class="form-control" value="VALORIZACION N° 17" required>
+              <!-- UN SOLO CAMPO DE VALORIZACIÓN POR REGISTRO -->
+              <select id="doc-valorizacion" class="form-select" required>
+                <option value="VALORIZACION N° 01">VALORIZACION N° 01</option>
+                <option value="VALORIZACION N° 02">VALORIZACION N° 02</option>
+                <option value="VALORIZACION N° 03">VALORIZACION N° 03</option>
+                <option value="VALORIZACION N° 04">VALORIZACION N° 04</option>
+                <option value="VALORIZACION N° 05">VALORIZACION N° 05</option>
+                <option value="VALORIZACION N° 06">VALORIZACION N° 06</option>
+                <option value="VALORIZACION N° 07">VALORIZACION N° 07</option>
+                <option value="VALORIZACION N° 08">VALORIZACION N° 08</option>
+                <option value="VALORIZACION N° 09">VALORIZACION N° 09</option>
+                <option value="VALORIZACION N° 10">VALORIZACION N° 10</option>
+                <option value="VALORIZACION N° 11">VALORIZACION N° 11</option>
+                <option value="VALORIZACION N° 12">VALORIZACION N° 12</option>
+                <option value="VALORIZACION N° 13">VALORIZACION N° 13</option>
+                <option value="VALORIZACION N° 14">VALORIZACION N° 14</option>
+                <option value="VALORIZACION N° 15">VALORIZACION N° 15</option>
+                <option value="VALORIZACION N° 16">VALORIZACION N° 16</option>
+                <option value="VALORIZACION N° 17">VALORIZACION N° 17</option>
+              </select>
             </div>
             <div class="col-md-4">
               <label class="form-label small text-secondary">Código de Partida</label>
@@ -382,7 +393,7 @@
 
           <div class="mb-3">
             <label class="form-label small text-secondary">Proyecto</label>
-            <input type="text" id="doc-proyecto" class="form-control" value="PROYECTO" required>
+            <input type="text" id="doc-proyecto" class="form-control" value="AGRICULTURA FAMILIAR" required>
           </div>
 
           <div class="mb-4">
@@ -636,7 +647,7 @@
   };
   dependenciasPartidas["AGRICULTURA FAMILIAR PROGRESO COYLLURQUI"] = dependenciasPartidas["DESARROLLO AGROPECUARIO AGRICULTURA FAMILIAR PROGRESO COYLLURQUI"];
 
-  // Función auxiliar para normalizar textos (sin tildes, comas ni espacios extra)
+  // Función auxiliar para normalizar textos
   function normalizarTexto(str) {
     if (!str) return "";
     return str
@@ -650,6 +661,86 @@
       .replace(/[,.-]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  // ==================== ORDENAMIENTO DE COLUMNAS EN TODAS LAS TABLAS ====================
+  function inicializarOrdenamientoTablas() {
+    document.querySelectorAll('.table-clara').forEach(table => {
+      const headers = table.querySelectorAll('thead th');
+      headers.forEach((th, colIdx) => {
+        if (th.classList.contains('sort-ready')) return;
+        th.classList.add('sort-ready', 'th-sortable');
+        const originalHtml = th.innerHTML;
+        th.innerHTML = `<div class="th-content"><span>${originalHtml}</span><span class="sort-icon"><i class="bi bi-chevron-expand"></i></span></div>`;
+        th.addEventListener('click', () => ordenarColumnaTabla(table, colIdx, th));
+      });
+    });
+  }
+
+  function obtenerValorOrdenable(texto) {
+    const limpio = (texto || '').trim();
+    if (!limpio || limpio === '—') return { tipo: 'vacio', val: '' };
+
+    // Formato fecha DD/MM/YYYY
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(limpio)) {
+      const [d, m, y] = limpio.split('/').map(Number);
+      return { tipo: 'num', val: new Date(y, m - 1, d).getTime() };
+    }
+
+    // Número puro
+    if (/^-?\d+(\.\d+)?$/.test(limpio)) {
+      return { tipo: 'num', val: parseFloat(limpio) };
+    }
+
+    return { tipo: 'str', val: limpio };
+  }
+
+  function ordenarColumnaTabla(table, colIdx, th) {
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+
+    const todasFilas = Array.from(tbody.querySelectorAll('tr'));
+    // Si la tabla solo tiene mensaje vacío, no hacer nada
+    if (todasFilas.length <= 1 && todasFilas[0] && todasFilas[0].cells.length === 1) return;
+
+    const filasFijas = todasFilas.filter(r => r.classList.contains('fila-total-fija'));
+    const filasDatos = todasFilas.filter(r => !r.classList.contains('fila-total-fija'));
+
+    const esAsc = !th.classList.contains('asc');
+
+    // Reiniciar iconos de las demás columnas de esta tabla
+    table.querySelectorAll('thead th').forEach(h => {
+      h.classList.remove('asc', 'desc');
+      const icon = h.querySelector('.sort-icon i');
+      if (icon) icon.className = 'bi bi-chevron-expand';
+    });
+
+    th.classList.add(esAsc ? 'asc' : 'desc');
+    const activeIcon = th.querySelector('.sort-icon i');
+    if (activeIcon) {
+      activeIcon.className = esAsc ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
+    }
+
+    filasDatos.sort((a, b) => {
+      const txtA = a.cells[colIdx] ? a.cells[colIdx].innerText : '';
+      const txtB = b.cells[colIdx] ? b.cells[colIdx].innerText : '';
+
+      const vA = obtenerValorOrdenable(txtA);
+      const vB = obtenerValorOrdenable(txtB);
+
+      if (vA.tipo === 'vacio' && vB.tipo !== 'vacio') return 1;
+      if (vB.tipo === 'vacio' && vA.tipo !== 'vacio') return -1;
+
+      if (vA.tipo === 'num' && vB.tipo === 'num') {
+        return esAsc ? vA.val - vB.val : vB.val - vA.val;
+      }
+
+      const cmp = String(vA.val).localeCompare(String(vB.val), 'es', { numeric: true, sensitivity: 'base' });
+      return esAsc ? cmp : -cmp;
+    });
+
+    filasDatos.forEach(r => tbody.appendChild(r));
+    filasFijas.forEach(r => tbody.appendChild(r));
   }
 
   // Buscador global instantáneo para cualquier tabla de la vista
@@ -685,6 +776,7 @@
 
   // ==================== INICIALIZACIÓN ====================
   async function init() {
+    inicializarOrdenamientoTablas();
     llenarComunidadesCeproder();
     actualizarPartidas();
     await cargarDatos();
@@ -877,6 +969,7 @@
     document.getElementById('form-documento').reset();
     document.getElementById('alerta-archivos').classList.add('d-none');
     document.getElementById('doc-id').value = '';
+    document.getElementById('doc-valorizacion').value = 'VALORIZACION N° 01';
     document.getElementById('titulo-form').innerHTML = '<i class="bi bi-plus-circle me-2"></i>Agregar Nueva Partida';
     modalFormulario.show();
   }
@@ -888,7 +981,15 @@
     document.getElementById('doc-id').value = d.id;
     document.getElementById('doc-anio').value = d.anio;
     document.getElementById('doc-proyecto').value = d.proyecto;
-    document.getElementById('doc-valorizacion').value = d.valorizacion;
+
+    // Seleccionar únicamente la valorización que pertenece al registro
+    const selectVal = document.getElementById('doc-valorizacion');
+    const valRegistro = (d.valorizacion || '').trim();
+    if (valRegistro && !Array.from(selectVal.options).some(opt => opt.value === valRegistro)) {
+      selectVal.add(new Option(valRegistro, valRegistro));
+    }
+    selectVal.value = valRegistro;
+
     document.getElementById('doc-codigo').value = d.partida_codigo;
     document.getElementById('doc-descripcion').value = d.partida_descripcion;
     modalFormulario.show();
@@ -1181,7 +1282,7 @@
     if (!table) return;
     
     const cloneTable = table.cloneNode(true);
-    const buttons = cloneTable.querySelectorAll('button, a.btn');
+    const buttons = cloneTable.querySelectorAll('button, a.btn, .sort-icon');
     buttons.forEach(btn => btn.remove());
 
     let html = cloneTable.outerHTML;
